@@ -21,7 +21,7 @@ basicproj/
     │   ├── gifImages/ 
     │   ├── images/ 
     │   ├── logo/ 
-    │    └── mp3/ 
+    │   └── mp3/ 
     ├── test/ # Dart 테스트 코드 
     └── pubspec.yaml # (매우 중요) 프로젝트 의존성 및 assets 경로 관리
 ```
