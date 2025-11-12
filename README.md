@@ -81,12 +81,12 @@ flutter:
 `screens/home_screen.dart`
 * **담당**: (팀원 B)
 * **설명**:
- - **(핵심)** 로그인 후 보게 될 메인 허브 화면입니다.
- - `Scaffold` 위젯을 사용하여 앱의 기본 구조(AppBar, Drawer, Body)를 잡습니다.
- - `AppBar` (상단 바)와 `Drawer` (사이드 메뉴)를 이곳에서 관리합니다.
- - `Drawer`에는 `widgets/app_drawer.dart`를 불러와 연결합니다.
- - **중요:** '현재 선택된 대화 상대'(`selectedCharacter`) 상태를 관리합니다.
- - `body` 영역은 `selectedCharacter` 상태에 따라 `widgets/initial_view.dart` (초기 화면) 또는 `widgets/chat_view.dart` (대화 화면)를 조건부로 보여줍니다.
+  - **(핵심)** 로그인 후 보게 될 메인 허브 화면입니다.
+  - `Scaffold` 위젯을 사용하여 앱의 기본 구조(AppBar, Drawer, Body)를 잡습니다.
+  - `AppBar` (상단 바)와 `Drawer` (사이드 메뉴)를 이곳에서 관리합니다.
+  - `Drawer`에는 `widgets/app_drawer.dart`를 불러와 연결합니다.
+  - **중요:** '현재 선택된 대화 상대'(`selectedCharacter`) 상태를 관리합니다.
+  - `body` 영역은 `selectedCharacter` 상태에 따라 `widgets/initial_view.dart` (초기 화면) 또는 `widgets/chat_view.dart` (대화 화면)를 조건부로 보여줍니다.
 
 `widgets/app_drawer.dart`
 * **담당**: (팀원 B 또는 C)
