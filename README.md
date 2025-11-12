@@ -125,3 +125,24 @@ flutter:
   - 질문 텍스트와 O/X 버튼을 포함합니다.
   - O 또는 X 버튼을 눌렀을 때의 로직(예: 정답/오답 표시)을 처리합니다.
   - '정답입니다!', '오답입니다!' UI도 이 위젯에서 함께 관리하거나 별도 위젯(`quiz_result_bubble.dart`)으로 분리할 수 있습니다.
+
+  
+## 각자의 작업 흐름
+1. 팀원이 develop 브랜치로 이동
+```Bash
+git checkout develop
+git pull origin develop
+```
+
+2. 팀원이 직접 feature 브랜치를 생성
+```Bash
+# '로그인' 기능 작업을 위해 'feature/login' 브랜치를 만듦
+git checkout -b feature/login
+```
+
+3. 팀원이 자기 feature/login 브랜치에서 작업 후 GitHub에 push
+```Bash
+git push origin feature/login
+```
+
+4. 팀원이 GitHub에서 develop 브랜치로 PR 생성
