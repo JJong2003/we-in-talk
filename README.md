@@ -136,13 +136,20 @@ git pull origin develop
 
 2. 팀원이 직접 feature 브랜치를 생성
 ```Bash
-# '로그인' 기능 작업을 위해 'feature/login' 브랜치를 만듦
-git checkout -b feature/login
+# '로그인' 기능 작업을 위해 'feature/~~~' 브랜치를 만듦
+git checkout -b feature/~~~
 ```
 
-3. 팀원이 자기 feature/login 브랜치에서 작업 후 GitHub에 push
+3. 팀원이 자기 feature/~~~ 브랜치에서 작업 후 GitHub에 push
 ```Bash
-git push origin feature/login
+git push origin feature/~~~
 ```
 
 4. 팀원이 GitHub에서 develop 브랜치로 PR 생성
+
+5. merge 진행
+
+6. (선택) 작업을 완료한 브랜치는 삭제
+```bash
+git branch -d feature/~~~ 
+```
