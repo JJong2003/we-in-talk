@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:weintalk/screens/home_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -54,7 +55,7 @@ class LoginScreen extends StatelessWidget {
                   // 실제 로고 이미지를 assets/images/logo.png 경로에 넣어주세요.
                   // pubspec.yaml 파일에 assets/images/ 경로를 등록해야 합니다.
                   child: Image.asset(
-                    'assets/images/logo.png', // <-- 여기에 실제 로고 이미지 경로를 넣어주세요.
+                    'assets/images/Logo.png',
                     fit: BoxFit.cover, // 이미지를 컨테이너에 맞게 채움
                   ),
                 ),
@@ -81,7 +82,7 @@ class LoginScreen extends StatelessWidget {
                       onPressed: () {
                         // TODO: 로그인 버튼 클릭 시 수행할 로직 구현
                         print('로그인 버튼 클릭됨');
-                        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen()));
+                        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen())); // home_screen.dart로 넘어감
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xFF333333), // 버튼 배경색 (짙은 회색)
