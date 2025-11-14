@@ -21,13 +21,13 @@ class MyApp extends StatelessWidget {
         // Scaffold의 기본 배경색 설정 (앱 프레임 색상)
         scaffoldBackgroundColor: const Color(0xFFF0F2F5), // 이미지의 여백과 비슷한 색
       ),
-      home: const HistoryScreen(),
+      home: const HomeScreen(),
     );
   }
 }
 
-class HistoryScreen extends StatelessWidget {
-  const HistoryScreen({super.key});
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
