@@ -151,5 +151,6 @@ git push origin feature/~~~
 
 6. (선택) 작업을 완료한 브랜치는 삭제
 ```bash
+git checkout develop
 git branch -d feature/~~~ 
 ```
