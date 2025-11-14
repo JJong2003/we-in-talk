@@ -70,7 +70,11 @@ flutter:
     - assets/images/Hangeul.png
     - assets/images/RainMeasure.png
     - assets/images/SunClock.png
-    - assets/images/kingsaejong/
+    - assets/images/Logo.png
+    - assets/images/mic_off.png
+    - assets/images/mic_on.png
+    - assets/images/kingsaejong/KingSaeJong_greeting_photo.png
+    - assets/images/kingsaejong/KingSaeJong_standing_photo.png
 
 #    - assets/logo/
     - assets/mp3/
