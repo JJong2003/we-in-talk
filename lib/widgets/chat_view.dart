@@ -1,6 +1,8 @@
 // lib/screens/chat_view.dart
 
 import 'package:flutter/material.dart';
+// 1. 새로 만든 ChatBubble 위젯 import
+import '../widgets/chat_bubble.dart';
 
 class ChatView extends StatelessWidget {
   const ChatView({Key? key}) : super(key: key);
@@ -27,29 +29,24 @@ class ChatView extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.all(16.0),
                 children: [
-                  // 이미지의 대화 내용을 바탕으로 한 Mock 데이터
-                  _buildChatBubble(
-                    context: context,
+                  // 2. _buildChatBubble -> ChatBubble 위젯으로 변경
+                  const ChatBubble(
                     text: "한글을 만들 때 여러 반대가 있었다던데, 누가 왜 반대했었어요?",
                     isUser: true,
                   ),
-                  _buildChatBubble(
-                    context: context,
+                  const ChatBubble(
                     text: "짐이 아끼던 집현전 학자 최만리 등이 반대했단다. 중국을 섬겨야 한다는 이유와, 백성들이 글을 알면 자신들의 특권을 잃을까 봐 두려워했기 때문이지.",
                     isUser: false,
                   ),
-                  _buildChatBubble(
-                    context: context,
+                  const ChatBubble(
                     text: "그러면 좋은거지 않았어요? 한글은 좋은거잖아요.",
                     isUser: true,
                   ),
-                  _buildChatBubble(
-                    context: context,
+                  const ChatBubble(
                     text: "짜증보다는 답답하고 안타까웠단다. 글 몰라 억울한 백성을 위해 만들었는데, 신하들이 백성의 아픔은 모르고 자신들의 권력만 지키려 하니 마음이 아팠지.",
                     isUser: false,
                   ),
-                  _buildChatBubble(
-                    context: context,
+                  const ChatBubble(
                     text: "아, 측우기 말이냐. 그것은 하늘의 비를 정확히 재어 백성들의 농사를 돕고자 짐이 만들게 한 것이란다. 어떠하냐, 이 측우기에 대해 짐이 더 자세히 알려주길 바라느냐?",
                     isUser: false,
                   ),
@@ -121,31 +118,6 @@ class ChatView extends StatelessWidget {
 
           // 4. 오른쪽 공간 확보용 SizedBox 제거 (Stack이라 불필요)
         ],
-      ),
-    );
-  }
-
-  // 채팅 말풍선 위젯
-  Widget _buildChatBubble({required BuildContext context, required String text, required bool isUser}) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      // isUser 값에 따라 정렬 변경
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-        decoration: BoxDecoration(
-          // isUser 값에 따라 색상 변경
-          color: isUser ? Colors.blue[100] : Colors.grey[200],
-          borderRadius: BorderRadius.circular(15.0),
-        ),
-        // 말풍선 최대 너비 제한
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.7,
-        ),
-        child: Text(
-          text,
-          style: const TextStyle(color: Colors.black87, fontSize: 15, height: 1.4),
-        ),
       ),
     );
   }
