@@ -1,14 +1,85 @@
-// main.dart (LoginScreen 부분)
+// lib/screens/login_screen.dart
+//아이디 admin@naver.com 비번 123456
 
-// 1. home_screen.dart와 signup_screen.dart를 import 합니다.
 import 'package:flutter/material.dart';
+// 1. Firebase Auth와 HomeScreen import
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:weintalk/screens/home_screen.dart';
-import 'package:weintalk/screens/signup_screen.dart'; // 회원가입 화면 import
+import 'package:weintalk/screens/signup_screen.dart';
 
-// (MyApp 클래스는 동일합니다...)
-
-class LoginScreen extends StatelessWidget {
+// 2. StatelessWidget -> StatefulWidget으로 변경
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  // 3. ID(Email)와 비밀번호 컨트롤러 선언
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  // 4. 로딩 상태 변수
+  bool _isLoading = false;
+
+  // 5. 컨트롤러 리소스 해제
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  // 6. Firebase 로그인 로직 함수
+  Future<void> _signIn() async {
+    // 7. 로딩 시작
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // 8. Firebase Auth로 로그인 시도
+      // (중요!) Firebase Auth는 '아이디'가 아닌 '이메일'로 로그인합니다.
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      // 9. 로그인 성공 시 HomeScreen으로 이동 (pushReplacement)
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomeScreen()),
+        );
+      }
+    } catch (e) {
+      // 10. 에러 처리
+      String errorMessage = '로그인에 실패했습니다.';
+      if (e is FirebaseAuthException) {
+        if (e.code == 'invalid-credential' || e.code == 'wrong-password') {
+          errorMessage = '이메일 또는 비밀번호가 일치하지 않습니다.';
+        } else if (e.code == 'user-not-found') {
+          errorMessage = '존재하지 않는 계정입니다.';
+        } else if (e.code == 'invalid-email') {
+          errorMessage = '유효하지 않은 이메일 형식입니다.';
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      // 11. 로딩 종료
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +91,7 @@ class LoginScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // --- 1. 로고 이미지 --- (이 부분은 동일)
+              // --- 1. 로고 이미지 (동일) ---
               Container(
                 width: 250,
                 height: 200,
@@ -45,8 +116,7 @@ class LoginScreen extends StatelessWidget {
               ),
               const SizedBox(height: 50),
 
-              // --- 2. 입력 필드 및 로그인 버튼 (SizedBox로 감싸기) ---
-              // 이 SizedBox가 최대 너비를 350으로 제한하고, Center가 가운데 정렬합니다.
+              // --- 2. 입력 필드 및 로그인 버튼 (SizedBox 너비 350 제한) ---
               SizedBox(
                 width: 350,
                 child: Row(
@@ -55,9 +125,10 @@ class LoginScreen extends StatelessWidget {
                     Expanded(
                       child: Column(
                         children: [
-                          _buildTextField(Icons.person_outline, '아이디'),
+                          // 12. 컨트롤러 연결
+                          _buildTextField(Icons.person_outline, '아이디 (이메일)', _emailController),
                           const SizedBox(height: 12),
-                          _buildTextField(Icons.lock_outline, '비밀번호', isPassword: true),
+                          _buildTextField(Icons.lock_outline, '비밀번호', _passwordController, isPassword: true),
                         ],
                       ),
                     ),
@@ -65,10 +136,8 @@ class LoginScreen extends StatelessWidget {
                     SizedBox(
                       height: 116,
                       child: ElevatedButton(
-                        onPressed: () {
-                          print('로그인 버튼 클릭됨');
-                          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen()));
-                        },
+                        // 13. onPressed에 _signIn 함수 연결 (로딩 중 비활성화)
+                        onPressed: _isLoading ? null : _signIn,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(0xFF333333),
                           foregroundColor: Colors.white,
@@ -77,7 +146,10 @@ class LoginScreen extends StatelessWidget {
                           ),
                           padding: EdgeInsets.symmetric(horizontal: 24),
                         ),
-                        child: Text('로그인'),
+                        // 14. 로딩 중이면 인디케이터 표시
+                        child: _isLoading
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text('로그인'),
                       ),
                     ),
                   ],
@@ -85,11 +157,10 @@ class LoginScreen extends StatelessWidget {
               ),
               const SizedBox(height: 30),
 
-              // --- 3. 계정 생성하기 텍스트 버튼 ---
+              // --- 3. 계정 생성하기 텍스트 버튼 (동일) ---
               TextButton(
                 onPressed: () {
                   print('계정 생성하기 클릭됨');
-                  // SignupScreen으로 이동
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => SignupScreen()),
@@ -104,7 +175,6 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              // (주석 처리된 4번 회원가입 버튼은 제거했습니다)
             ],
           ),
         ),
@@ -112,10 +182,10 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  // --- 공통 TextField 위젯 (이 부분은 동일) ---
-  Widget _buildTextField(IconData icon, String hintText, {bool isPassword = false}) {
-    // ... (기존 코드와 동일)
+  // 15. _buildTextField 함수가 컨트롤러를 받도록 수정
+  Widget _buildTextField(IconData icon, String hintText, TextEditingController controller, {bool isPassword = false}) {
     return TextField(
+      controller: controller, // 컨트롤러 연결
       obscureText: isPassword,
       decoration: InputDecoration(
         prefixIcon: Icon(icon, color: Colors.grey[600]),
