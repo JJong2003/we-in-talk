@@ -1,27 +1,11 @@
+// main.dart (LoginScreen 부분)
+
+// 1. home_screen.dart와 signup_screen.dart를 import 합니다.
 import 'package:flutter/material.dart';
 import 'package:weintalk/screens/home_screen.dart';
-import 'package:weintalk/screens/signup_screen.dart';
+import 'package:weintalk/screens/signup_screen.dart'; // 회원가입 화면 import
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false, // 디버그 배너 제거
-      title: 'History AI Chat',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: LoginScreen(), // 앱 시작 시 LoginScreen을 보여줍니다.
-    );
-  }
-}
+// (MyApp 클래스는 동일합니다...)
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -29,41 +13,40 @@ class LoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // 전체 배경색을 흰색으로 설정
+      backgroundColor: Colors.white,
       body: Center(
-        child: SingleChildScrollView( // 화면이 작아질 경우 스크롤 가능하도록
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 40.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // --- 1. 로고 이미지 ---
+              // --- 1. 로고 이미지 --- (이 부분은 동일)
               Container(
-                width: 250, // 로고 너비
-                height: 200, // 로고 높이
+                width: 250,
+                height: 200,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20), // 모서리 둥글게
+                  borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.3), // 그림자 색상
-                      spreadRadius: 2, // 그림자 퍼짐 정도
-                      blurRadius: 10, // 그림자 흐림 정도
-                      offset: Offset(0, 5), // 그림자 위치 (x, y)
+                      color: Colors.grey.withOpacity(0.3),
+                      spreadRadius: 2,
+                      blurRadius: 10,
+                      offset: Offset(0, 5),
                     ),
                   ],
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(20),
-                  // 실제 로고 이미지를 assets/images/logo.png 경로에 넣어주세요.
-                  // pubspec.yaml 파일에 assets/images/ 경로를 등록해야 합니다.
                   child: Image.asset(
                     'assets/images/Logo.png',
-                    fit: BoxFit.cover, // 이미지를 컨테이너에 맞게 채움
+                    fit: BoxFit.cover,
                   ),
                 ),
               ),
-              const SizedBox(height: 50), // 로고와 입력 필드 사이 간격
+              const SizedBox(height: 50),
 
-              // --- 2. 아이디, 비밀번호 입력 필드 및 로그인 버튼 ---
+              // --- 2. 입력 필드 및 로그인 버튼 (SizedBox로 감싸기) ---
+              // 이 SizedBox가 최대 너비를 350으로 제한하고, Center가 가운데 정렬합니다.
               SizedBox(
                 width: 350,
                 child: Row(
@@ -121,24 +104,7 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ),
               ),
-
-              // --- 4. 회원가입 버튼 ---
-              // ElevatedButton(
-              //   onPressed: () {
-              //     // TODO: '회원가입' 버튼 클릭 시 수행할 로직 구현
-              //     print('회원가입 버튼 클릭됨');
-              //     // Navigator.push(context, MaterialPageRoute(builder: (context) => SignupScreen()));
-              //   },
-              //   style: ElevatedButton.styleFrom(
-              //     backgroundColor: Color(0xFF333333), // 버튼 배경색 (짙은 회색)
-              //     foregroundColor: Colors.white, // 버튼 텍스트 색상
-              //     shape: RoundedRectangleBorder(
-              //       borderRadius: BorderRadius.circular(8), // 버튼 모서리 둥글게
-              //     ),
-              //     padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15), // 버튼 내부 패딩
-              //   ),
-              //   child: Text('회원가입', style: TextStyle(fontSize: 16)),
-              // ),
+              // (주석 처리된 4번 회원가입 버튼은 제거했습니다)
             ],
           ),
         ),
@@ -146,25 +112,25 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  // --- 공통 TextField 위젯 (아이콘, 힌트 텍스트, 비밀번호 마스킹) ---
+  // --- 공통 TextField 위젯 (이 부분은 동일) ---
   Widget _buildTextField(IconData icon, String hintText, {bool isPassword = false}) {
+    // ... (기존 코드와 동일)
     return TextField(
-      obscureText: isPassword, // isPassword가 true면 텍스트를 숨깁니다.
+      obscureText: isPassword,
       decoration: InputDecoration(
-        prefixIcon: Icon(icon, color: Colors.grey[600]), // 텍스트 필드 왼쪽 아이콘
-        hintText: hintText, // 힌트 텍스트
-        hintStyle: TextStyle(color: Colors.grey[400]), // 힌트 텍스트 스타일
-        // 밑줄 스타일 설정
+        prefixIcon: Icon(icon, color: Colors.grey[600]),
+        hintText: hintText,
+        hintStyle: TextStyle(color: Colors.grey[400]),
         enabledBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.grey[400]!), // 기본 밑줄 색상
+          borderSide: BorderSide(color: Colors.grey[400]!),
         ),
         focusedBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.blueAccent), // 포커스 시 밑줄 색상
+          borderSide: BorderSide(color: Colors.blueAccent),
         ),
-        contentPadding: EdgeInsets.symmetric(vertical: 10.0), // 텍스트 필드 내부 패딩
+        contentPadding: EdgeInsets.symmetric(vertical: 10.0),
       ),
-      style: TextStyle(color: Colors.black87), // 입력 텍스트 색상
-      cursorColor: Colors.blueAccent, // 커서 색상
+      style: TextStyle(color: Colors.black87),
+      cursorColor: Colors.blueAccent,
     );
   }
 }
