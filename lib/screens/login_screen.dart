@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:weintalk/screens/home_screen.dart';
+import 'package:weintalk/screens/signup_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -63,59 +64,63 @@ class LoginScreen extends StatelessWidget {
               const SizedBox(height: 50), // 로고와 입력 필드 사이 간격
 
               // --- 2. 아이디, 비밀번호 입력 필드 및 로그인 버튼 ---
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end, // 버튼과 텍스트필드 정렬을 위함
-                children: [
-                  Expanded(
-                    child: Column(
-                      children: [
-                        _buildTextField(Icons.person_outline, '아이디'),
-                        const SizedBox(height: 12), // 아이디와 비밀번호 필드 사이 간격
-                        _buildTextField(Icons.lock_outline, '비밀번호', isPassword: true),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16), // 입력 필드와 로그인 버튼 사이 간격
-                  SizedBox(
-                    height: 116, // 두 텍스트 필드의 총 높이에 맞춰 로그인 버튼 높이 설정
-                    child: ElevatedButton(
-                      onPressed: () {
-                        // TODO: 로그인 버튼 클릭 시 수행할 로직 구현
-                        print('로그인 버튼 클릭됨');
-                        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen())); // home_screen.dart로 넘어감
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF333333), // 버튼 배경색 (짙은 회색)
-                        foregroundColor: Colors.white, // 버튼 텍스트 색상
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8), // 버튼 모서리 둥글게
-                        ),
-                        padding: EdgeInsets.symmetric(horizontal: 24), // 버튼 내부 패딩
+              SizedBox(
+                width: 350,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        children: [
+                          _buildTextField(Icons.person_outline, '아이디'),
+                          const SizedBox(height: 12),
+                          _buildTextField(Icons.lock_outline, '비밀번호', isPassword: true),
+                        ],
                       ),
-                      child: Text('로그인'),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 16),
+                    SizedBox(
+                      height: 116,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          print('로그인 버튼 클릭됨');
+                          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen()));
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF333333),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: EdgeInsets.symmetric(horizontal: 24),
+                        ),
+                        child: Text('로그인'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 30), // 로그인 섹션과 '계정 생성하기' 사이 간격
+              const SizedBox(height: 30),
 
               // --- 3. 계정 생성하기 텍스트 버튼 ---
               TextButton(
                 onPressed: () {
-                  // TODO: '계정 생성하기' 클릭 시 수행할 로직 구현
                   print('계정 생성하기 클릭됨');
-                  // Navigator.push(context, MaterialPageRoute(builder: (context) => SignupScreen()));
+                  // SignupScreen으로 이동
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => SignupScreen()),
+                  );
                 },
                 child: Text(
                   '계정 생성하기',
                   style: TextStyle(
-                    color: Colors.grey[700], // 텍스트 색상
-                    decoration: TextDecoration.underline, // 밑줄
+                    color: Colors.grey[700],
+                    decoration: TextDecoration.underline,
                     fontSize: 14,
                   ),
                 ),
               ),
-              const SizedBox(height: 12), // '계정 생성하기'와 '회원가입' 버튼 사이 간격
 
               // --- 4. 회원가입 버튼 ---
               // ElevatedButton(
