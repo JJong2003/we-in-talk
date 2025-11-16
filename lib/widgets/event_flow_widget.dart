@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 
 // 1. 사건(Event)의 데이터 구조를 정의합니다. (아이콘과 라벨)
 class _EventData {
-  final IconData icon;
+  final String imagePath;
   final String label;
 
-  const _EventData({required this.icon, required this.label});
+  const _EventData({required this.imagePath, required this.label});
 }
 
 // 2. StatelessWidget -> StatefulWidget으로 변경
@@ -22,15 +22,13 @@ class _EventFlowWidgetState extends State<EventFlowWidget> {
   // 3. 전체 '사건' 목록 (배열)
   // (임시 데이터)
   final List<_EventData> _allEvents = [
-    const _EventData(icon: Icons.cloudy_snowing, label: "측우기"),
-    const _EventData(icon: Icons.book, label: "훈민정음"),
-    const _EventData(icon: Icons.castle, label: "집현전"),
-    const _EventData(icon: Icons.person, label: "신숙주"),
-    const _EventData(icon: Icons.people, label: "사대부"),
+    const _EventData(imagePath: "assets/images/SunClock.png", label: "앙부일구"),
+    const _EventData(imagePath: "assets/images/RainMeasure.png", label: "측우기"),
+    const _EventData(imagePath: "assets/images/Hangeul.png", label: "훈민정음"),
   ];
 
   // 4. 현재 중앙에 표시될 아이템의 인덱스 (State)
-  int _currentIndex = 0; // 0번 인덱스("측우기")에서 시작
+  int _currentIndex = 1; // 1번 인덱스("측우기")에서 시작
 
   // 5. '이전'으로 이동하는 함수
   void _goToPrevious() {
@@ -120,7 +118,18 @@ class _EventFlowWidgetState extends State<EventFlowWidget> {
           mainAxisSize: MainAxisSize.min,
           children: [
             // 12. event가 null일 경우를 대비 (??)
-            Icon(event?.icon ?? Icons.help_outline, color: Colors.white, size: 30),
+            (event?.imagePath != null) // 1. imagePath가 존재하는지 확인
+                ? Image.asset( // 2. 존재하면 Image.asset 표시
+              event!.imagePath,
+              width: 30,
+              height: 30,
+              fit: BoxFit.cover, // 이미지가 30x30 영역에 잘 맞도록
+            )
+                : const Icon( // 3. 존재하지 않으면(null이면) 기존 아이콘 표시
+              Icons.help_outline,
+              color: Colors.white,
+              size: 30,
+            ),
             const SizedBox(height: 4),
             Text(
               event?.label ?? "", // null이면 빈 텍스트
