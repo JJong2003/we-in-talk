@@ -16,6 +16,8 @@ class ChatView extends StatefulWidget {
 class _ChatViewState extends State<ChatView> {
   // 3. 현재 퀴즈 탭을 보고 있는지 관리하는 상태 변수
   bool _isShowingQuiz = false;
+  // 마이크 상태 변수
+  bool _isRecording = true;
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +50,8 @@ class _ChatViewState extends State<ChatView> {
                   ? const QuizScreen() // 퀴즈 화면
                   : _buildChatLog(), // 기존 질문 정리 화면
             ),
+
+            _buildMicrophoneControl(),
           ],
         ),
       ),
@@ -83,6 +87,65 @@ class _ChatViewState extends State<ChatView> {
         ),
 
       ],
+    );
+  }
+
+  Widget _buildMicrophoneControl() {
+    // 탭을 감지하기 위해 GestureDetector 사용
+    return GestureDetector(
+      onTap: () {
+        // 탭하면 setState를 호출하여 상태 변경
+        setState(() {
+          _isRecording = !_isRecording;
+        });
+      },
+      child: Container(
+        color: Colors.white, // 배경색
+        padding: const EdgeInsets.symmetric(vertical: 16.0), // 위아래 여백
+        // _isRecording 상태에 따라 다른 아이콘을 표시
+        child: _isRecording
+            ? _buildRecordingIcon() // true일 때 (RECORDING)
+            : _buildOfflineIcon(), // false일 때 (OFFLINE)
+      ),
+    );
+  }
+
+  // "OFFLINE" 상태의 아이콘 (크기 축소됨)
+  Widget _buildOfflineIcon() {
+    return Container(
+      padding: const EdgeInsets.all(16), // 원본(40)보다 크기 축소
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.grey.shade800,
+      ),
+      child: const Icon(
+        Icons.mic_off,
+        color: Colors.white,
+        size: 32, // 원본(80)보다 크기 축소
+      ),
+    );
+  }
+
+  // "RECORDING" 상태의 아이콘 (크기 축소됨, Text 제거)
+  Widget _buildRecordingIcon() {
+    return Container(
+      padding: const EdgeInsets.all(16), // 원본(40)보다 크기 축소
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.blue.shade600,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.5),
+            blurRadius: 10.0, // 원본(20)보다 효과 축소
+            spreadRadius: 2.0, // 원본(5)보다 효과 축소
+          ),
+        ],
+      ),
+      child: const Icon(
+        Icons.mic,
+        color: Colors.white,
+        size: 32, // 원본(80)보다 크기 축소
+      ),
     );
   }
 
