@@ -149,57 +149,72 @@ class _ChatViewState extends State<ChatView> {
     );
   }
 
-  // 7. 상단 탭바 위젯 (상태에 따라 버튼 스타일이 바뀌도록 수정)
+  // 7. 상단 탭바 위젯 (Row + Expanded로 Overflow 오류 해결)
+  // 7. 상단 탭바 위젯 (Row + Expanded로 Overflow 오류 해결)
+// 7. 상단 탭바 위젯 (버튼 크기 자체를 줄여서 Overflow 해결)
+  // 7. 상단 탭바 위젯 (버튼의 좌우 Padding을 줄여 Overflow 해결)
   Widget _buildTopTabBar({
     required BuildContext context,
     required bool isQuizActive,
     required VoidCallback onQuizTap,
     required VoidCallback onChatTap,
   }) {
-    // 비활성/활성 버튼 스타일 정의
+    // 1. 버튼 스타일 정의에 'padding' 속성 추가
     final inactiveStyle = ElevatedButton.styleFrom(
-      backgroundColor: Colors.grey[200], // 비활성 색상
+      backgroundColor: Colors.grey[200],
       foregroundColor: Colors.black54,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      // 이 버튼의 좌우 여백을 기본값보다 좁게 설정 (8.0)
+      padding: const EdgeInsets.symmetric(horizontal: 10.0),
     );
     final activeStyle = ElevatedButton.styleFrom(
-      backgroundColor: Colors.blue, // 활성 색상
+      backgroundColor: Colors.blue,
       foregroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      // 이 버튼의 좌우 여백을 기본값보다 좁게 설정 (8.0)
+      padding: const EdgeInsets.symmetric(horizontal: 10.0),
     );
 
+    // 2. 이 아래의 Row 레이아웃은 이전과 동일하게 유지합니다.
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
-      child: Stack(
-        alignment: Alignment.center,
+      child: Row(
         children: [
-          // 중앙 버튼 그룹
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // "퀴즈 만들기" 버튼
-              ElevatedButton.icon(
-                icon: const Icon(Icons.edit_note, size: 20),
-                label: const Text("퀴즈 만들기"),
-                onPressed: onQuizTap, // 퀴즈 탭 보기
-                style: isQuizActive ? activeStyle : inactiveStyle, // 상태에 따라 스타일 적용
-              ),
-              const SizedBox(width: 8),
-              // "질문 정리" 탭
-              ElevatedButton.icon(
-                icon: const Icon(Icons.article, size: 20),
-                label: const Text("질문 정리"),
-                onPressed: onChatTap, // 질문 탭 보기
-                style: isQuizActive ? inactiveStyle : activeStyle, // 상태에 따라 스타일 적용
-              ),
-            ],
+          // [왼쪽 영역]
+          IconButton(
+            icon: const Icon(Icons.arrow_forward_ios),
+            onPressed: () => Navigator.of(context).pop(),
+            iconSize: 20.0,
           ),
-          // 뒤로가기 화살표
-          Align(
-            alignment: Alignment.centerLeft,
+
+          // [중앙 영역]
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // "퀴즈 만들기" 버튼 (아이콘 없이)
+                ElevatedButton(
+                  child: const Text("퀴즈 만들기"),
+                  onPressed: onQuizTap,
+                  style: isQuizActive ? activeStyle : inactiveStyle,
+                ),
+                const SizedBox(width: 8),
+                // "질문 정리" 탭 (아이콘 없이)
+                ElevatedButton(
+                  child: const Text("질문 정리"),
+                  onPressed: onChatTap,
+                  style: isQuizActive ? inactiveStyle : activeStyle,
+                ),
+              ],
+            ),
+          ),
+
+          // [오른쪽 영역]
+          Opacity(
+            opacity: 0.0,
             child: IconButton(
               icon: const Icon(Icons.arrow_forward_ios),
-              onPressed: () => Navigator.of(context).pop(), // Drawer 닫기
+              onPressed: null,
               iconSize: 20.0,
             ),
           ),
