@@ -16,6 +16,8 @@ class _SaejongChatScreenState extends State<SaejongChatScreen> {
   bool _isQuizMode = false;
   // 퀴즈 중 세종대왕 위치를 제어할 새 상태 추가
   bool _isKingCentered = false;
+  // 마이크 상태 변수를 추가
+  bool _isRecording = true;
 
   // 퀴즈 모드/채팅 모드 전환 함수
   void _toggleQuizMode(bool isQuiz) {
@@ -32,6 +34,13 @@ class _SaejongChatScreenState extends State<SaejongChatScreen> {
   void _toggleKingPosition(bool isCentered) {
     setState(() {
       _isKingCentered = isCentered;
+    });
+  }
+
+  // 마이크 상태를 바꾸는 함수
+  void _toggleRecording() {
+    setState(() {
+      _isRecording = !_isRecording;
     });
   }
 
@@ -88,12 +97,8 @@ class _SaejongChatScreenState extends State<SaejongChatScreen> {
           isQuizMode: _isQuizMode, // 현재 퀴즈 모드 상태 전달
           onToggleQuizMode: _toggleQuizMode,
           onToggleKingPosition: _toggleKingPosition,
-          // onToggleQuizMode: (isQuiz) {
-          //   // ChatView에서 버튼이 눌리면 이 함수가 실행됨
-          //   setState(() {
-          //     _isQuizMode = isQuiz; // 부모의 상태를 변경
-          //   });
-          // },
+          isRecording: _isRecording,
+          onToggleRecording: _toggleRecording,
         ),
       ),
 
