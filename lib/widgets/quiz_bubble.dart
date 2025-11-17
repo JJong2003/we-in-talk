@@ -142,8 +142,8 @@ class _QuizScreenState extends State<QuizScreen> {
                         // 1. 요약 화면일 때: '질문 정리' 창으로 이동
                         widget.onToggleQuizMode(false);
                       } else {
-                        // 2. 퀴즈 푸는 중일 때: 세종대왕을 '왼쪽'으로 이동
-                        widget.onToggleKingPosition(false);
+                        // 2. 퀴즈 푸는 중일 때: 이전 문제로 이동
+
                       }
                     },
                   ),
@@ -154,8 +154,8 @@ class _QuizScreenState extends State<QuizScreen> {
                   IconButton(
                     icon: Icon(Icons.arrow_forward, color: Colors.blue[700]),
                     onPressed: () {
-                      // 1. 퀴즈/요약 상관없이: 세종대왕을 '중앙'으로 이동
-                      widget.onToggleKingPosition(true);
+                      // 다음 문제로 이동
+
                     },
                   ),
                 ],
