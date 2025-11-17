@@ -9,12 +9,17 @@ class ChatView extends StatefulWidget {
   final bool isQuizMode;
   final ValueChanged<bool> onToggleQuizMode;
   final ValueChanged<bool> onToggleKingPosition;
+  // 부모로부터 마이크 상태와 함수를 받습니다.
+  final bool isRecording;
+  final VoidCallback onToggleRecording;
 
   const ChatView({
     Key? key,
     required this.isQuizMode, // 부모가 퀴즈 모드 상태를 전달
     required this.onToggleQuizMode, // 부모의 상태 변경 함수를 전달
-    required this.onToggleKingPosition
+    required this.onToggleKingPosition,
+    required this.isRecording,
+    required this.onToggleRecording,
   }) : super(key: key);
 
   @override
@@ -22,9 +27,6 @@ class ChatView extends StatefulWidget {
 }
 
 class _ChatViewState extends State<ChatView> {
-  // 마이크 상태 변수 (이건 ChatView가 자체적으로 가져도 됨)
-  bool _isRecording = false;
-
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -98,15 +100,18 @@ class _ChatViewState extends State<ChatView> {
   // 마이크 컨트롤 위젯 (기존과 동일)
   Widget _buildMicrophoneControl() {
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _isRecording = !_isRecording;
-        });
-      },
+      // -------------------------------------------------------
+      // ▼ [수정 3] 부모가 준 함수 호출
+      // -------------------------------------------------------
+      onTap: widget.onToggleRecording,
+
       child: Container(
         color: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 16.0),
-        child: _isRecording
+        // -------------------------------------------------------
+        // ▼ [수정 4] 부모가 준 상태값(widget.isRecording) 사용
+        // -------------------------------------------------------
+        child: widget.isRecording
             ? _buildRecordingIcon()
             : _buildOfflineIcon(),
       ),
