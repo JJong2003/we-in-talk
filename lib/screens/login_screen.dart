@@ -38,7 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    // [추가] userName 읽어오는 부분
+    // [추가] userName 읽어 오는 부분
     try {
       // 8. Firebase Auth로 로그인 시도
       // (중요!) Firebase Auth는 '아이디'가 아닌 '이메일'로 로그인합니다.

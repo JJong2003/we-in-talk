@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../widgets/app_drawer.dart'; // 위에서 만든 Drawer 위젯 import
 
 class HomeScreen extends StatefulWidget {
-  // username 저장할 변수
+  // userName 저장할 변수
   final String userName;
   const HomeScreen({Key? key, required this.userName}) : super(key: key);
 
