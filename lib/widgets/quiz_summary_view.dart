@@ -4,14 +4,16 @@ import 'package:flutter/material.dart';
 import 'quiz_bubble.dart'; // QuizProblem 모델 import
 
 class QuizSummaryView extends StatelessWidget {
+  final List<QuizProblem> problems;
+  final VoidCallback onRestart;
+  final VoidCallback onClose;
+
   const QuizSummaryView({
     Key? key,
     required this.problems,
     required this.onRestart,
+    required this.onClose,
   }) : super(key: key);
-
-  final List<QuizProblem> problems;
-  final VoidCallback onRestart;
 
   @override
   Widget build(BuildContext context) {
@@ -69,10 +71,7 @@ class QuizSummaryView extends StatelessWidget {
                 ),
                 ElevatedButton(
                   child: Text("퀴즈 닫기"),
-                  onPressed: () {
-                    // Drawer를 닫습니다.
-                    Navigator.of(context).pop();
-                  },
+                  onPressed: onClose,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.grey[300],
                     foregroundColor: Colors.black54,
