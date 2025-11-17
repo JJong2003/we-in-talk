@@ -38,19 +38,26 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
+    // [추가] userName 읽어오는 부분
     try {
       // 8. Firebase Auth로 로그인 시도
       // (중요!) Firebase Auth는 '아이디'가 아닌 '이메일'로 로그인합니다.
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
+
+      // 로그인한 사용자 정보에서 이름 가져오기
+      User? user = userCredential.user;
+      // default userName (이름이 없을 경우)
+      String userName = user?.displayName ?? "김철수";
 
       // 9. 로그인 성공 시 HomeScreen으로 이동 (pushReplacement)
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => HomeScreen()),
+          MaterialPageRoute(builder: (context) => HomeScreen(userName: userName),),
         );
       }
     } catch (e) {

@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../widgets/app_drawer.dart'; // 위에서 만든 Drawer 위젯 import
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  // username 저장할 변수
+  final String userName;
+  const HomeScreen({Key? key, required this.userName}) : super(key: key);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -36,9 +38,10 @@ class _HomeScreenState extends State<HomeScreen> {
         
         
         // 중앙 제목 (줄바꿈 포함)
-        title: const Text(
-          '안녕하세요\n김철수',
-          style: TextStyle(fontSize: 18.0, height: 1.2),
+        // userName에 따라 바뀌도록 수정
+        title: Text(
+          '안녕하세요\n${widget.userName}',
+          style: const TextStyle(fontSize: 18.0, height: 1.2),
           textAlign: TextAlign.center,
         ),
         centerTitle: true,
