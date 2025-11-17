@@ -1,139 +1,180 @@
+// lib/screens/login_screen.dart
+//아이디 admin@naver.com 비번 123456
+
 import 'package:flutter/material.dart';
+// 1. Firebase Auth와 HomeScreen import
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:weintalk/screens/home_screen.dart';
+import 'package:weintalk/screens/signup_screen.dart';
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+// 2. StatelessWidget -> StatefulWidget으로 변경
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false, // 디버그 배너 제거
-      title: 'History AI Chat',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: LoginScreen(), // 앱 시작 시 LoginScreen을 보여줍니다.
-    );
-  }
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
+class _LoginScreenState extends State<LoginScreen> {
+  // 3. ID(Email)와 비밀번호 컨트롤러 선언
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  // 4. 로딩 상태 변수
+  bool _isLoading = false;
+
+  // 5. 컨트롤러 리소스 해제
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  // 6. Firebase 로그인 로직 함수
+  Future<void> _signIn() async {
+    // 7. 로딩 시작
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // 8. Firebase Auth로 로그인 시도
+      // (중요!) Firebase Auth는 '아이디'가 아닌 '이메일'로 로그인합니다.
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      // 9. 로그인 성공 시 HomeScreen으로 이동 (pushReplacement)
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomeScreen()),
+        );
+      }
+    } catch (e) {
+      // 10. 에러 처리
+      String errorMessage = '로그인에 실패했습니다.';
+      if (e is FirebaseAuthException) {
+        if (e.code == 'invalid-credential' || e.code == 'wrong-password') {
+          errorMessage = '이메일 또는 비밀번호가 일치하지 않습니다.';
+        } else if (e.code == 'user-not-found') {
+          errorMessage = '존재하지 않는 계정입니다.';
+        } else if (e.code == 'invalid-email') {
+          errorMessage = '유효하지 않은 이메일 형식입니다.';
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      // 11. 로딩 종료
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // 전체 배경색을 흰색으로 설정
+      backgroundColor: Colors.white,
       body: Center(
-        child: SingleChildScrollView( // 화면이 작아질 경우 스크롤 가능하도록
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 40.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // --- 1. 로고 이미지 ---
+              // --- 1. 로고 이미지 (동일) ---
               Container(
-                width: 250, // 로고 너비
-                height: 200, // 로고 높이
+                width: 250,
+                height: 200,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20), // 모서리 둥글게
+                  borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.3), // 그림자 색상
-                      spreadRadius: 2, // 그림자 퍼짐 정도
-                      blurRadius: 10, // 그림자 흐림 정도
-                      offset: Offset(0, 5), // 그림자 위치 (x, y)
+                      color: Colors.grey.withOpacity(0.3),
+                      spreadRadius: 2,
+                      blurRadius: 10,
+                      offset: Offset(0, 5),
                     ),
                   ],
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(20),
-                  // 실제 로고 이미지를 assets/images/logo.png 경로에 넣어주세요.
-                  // pubspec.yaml 파일에 assets/images/ 경로를 등록해야 합니다.
                   child: Image.asset(
                     'assets/images/Logo.png',
-                    fit: BoxFit.cover, // 이미지를 컨테이너에 맞게 채움
+                    fit: BoxFit.cover,
                   ),
                 ),
               ),
-              const SizedBox(height: 50), // 로고와 입력 필드 사이 간격
+              const SizedBox(height: 50),
 
-              // --- 2. 아이디, 비밀번호 입력 필드 및 로그인 버튼 ---
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end, // 버튼과 텍스트필드 정렬을 위함
-                children: [
-                  Expanded(
-                    child: Column(
-                      children: [
-                        _buildTextField(Icons.person_outline, '아이디'),
-                        const SizedBox(height: 12), // 아이디와 비밀번호 필드 사이 간격
-                        _buildTextField(Icons.lock_outline, '비밀번호', isPassword: true),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16), // 입력 필드와 로그인 버튼 사이 간격
-                  SizedBox(
-                    height: 116, // 두 텍스트 필드의 총 높이에 맞춰 로그인 버튼 높이 설정
-                    child: ElevatedButton(
-                      onPressed: () {
-                        // TODO: 로그인 버튼 클릭 시 수행할 로직 구현
-                        print('로그인 버튼 클릭됨');
-                        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen())); // home_screen.dart로 넘어감
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF333333), // 버튼 배경색 (짙은 회색)
-                        foregroundColor: Colors.white, // 버튼 텍스트 색상
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8), // 버튼 모서리 둥글게
-                        ),
-                        padding: EdgeInsets.symmetric(horizontal: 24), // 버튼 내부 패딩
+              // --- 2. 입력 필드 및 로그인 버튼 (SizedBox 너비 350 제한) ---
+              SizedBox(
+                width: 350,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        children: [
+                          // 12. 컨트롤러 연결
+                          _buildTextField(Icons.person_outline, '아이디 (이메일)', _emailController),
+                          const SizedBox(height: 12),
+                          _buildTextField(Icons.lock_outline, '비밀번호', _passwordController, isPassword: true),
+                        ],
                       ),
-                      child: Text('로그인'),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 16),
+                    SizedBox(
+                      height: 116,
+                      child: ElevatedButton(
+                        // 13. onPressed에 _signIn 함수 연결 (로딩 중 비활성화)
+                        onPressed: _isLoading ? null : _signIn,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF333333),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: EdgeInsets.symmetric(horizontal: 24),
+                        ),
+                        // 14. 로딩 중이면 인디케이터 표시
+                        child: _isLoading
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text('로그인'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 30), // 로그인 섹션과 '계정 생성하기' 사이 간격
+              const SizedBox(height: 30),
 
-              // --- 3. 계정 생성하기 텍스트 버튼 ---
+              // --- 3. 계정 생성하기 텍스트 버튼 (동일) ---
               TextButton(
                 onPressed: () {
-                  // TODO: '계정 생성하기' 클릭 시 수행할 로직 구현
                   print('계정 생성하기 클릭됨');
-                  // Navigator.push(context, MaterialPageRoute(builder: (context) => SignupScreen()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => SignupScreen()),
+                  );
                 },
                 child: Text(
                   '계정 생성하기',
                   style: TextStyle(
-                    color: Colors.grey[700], // 텍스트 색상
-                    decoration: TextDecoration.underline, // 밑줄
+                    color: Colors.grey[700],
+                    decoration: TextDecoration.underline,
                     fontSize: 14,
                   ),
                 ),
               ),
-              const SizedBox(height: 12), // '계정 생성하기'와 '회원가입' 버튼 사이 간격
-
-              // --- 4. 회원가입 버튼 ---
-              // ElevatedButton(
-              //   onPressed: () {
-              //     // TODO: '회원가입' 버튼 클릭 시 수행할 로직 구현
-              //     print('회원가입 버튼 클릭됨');
-              //     // Navigator.push(context, MaterialPageRoute(builder: (context) => SignupScreen()));
-              //   },
-              //   style: ElevatedButton.styleFrom(
-              //     backgroundColor: Color(0xFF333333), // 버튼 배경색 (짙은 회색)
-              //     foregroundColor: Colors.white, // 버튼 텍스트 색상
-              //     shape: RoundedRectangleBorder(
-              //       borderRadius: BorderRadius.circular(8), // 버튼 모서리 둥글게
-              //     ),
-              //     padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15), // 버튼 내부 패딩
-              //   ),
-              //   child: Text('회원가입', style: TextStyle(fontSize: 16)),
-              // ),
             ],
           ),
         ),
@@ -141,25 +182,25 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  // --- 공통 TextField 위젯 (아이콘, 힌트 텍스트, 비밀번호 마스킹) ---
-  Widget _buildTextField(IconData icon, String hintText, {bool isPassword = false}) {
+  // 15. _buildTextField 함수가 컨트롤러를 받도록 수정
+  Widget _buildTextField(IconData icon, String hintText, TextEditingController controller, {bool isPassword = false}) {
     return TextField(
-      obscureText: isPassword, // isPassword가 true면 텍스트를 숨깁니다.
+      controller: controller, // 컨트롤러 연결
+      obscureText: isPassword,
       decoration: InputDecoration(
-        prefixIcon: Icon(icon, color: Colors.grey[600]), // 텍스트 필드 왼쪽 아이콘
-        hintText: hintText, // 힌트 텍스트
-        hintStyle: TextStyle(color: Colors.grey[400]), // 힌트 텍스트 스타일
-        // 밑줄 스타일 설정
+        prefixIcon: Icon(icon, color: Colors.grey[600]),
+        hintText: hintText,
+        hintStyle: TextStyle(color: Colors.grey[400]),
         enabledBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.grey[400]!), // 기본 밑줄 색상
+          borderSide: BorderSide(color: Colors.grey[400]!),
         ),
         focusedBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.blueAccent), // 포커스 시 밑줄 색상
+          borderSide: BorderSide(color: Colors.blueAccent),
         ),
-        contentPadding: EdgeInsets.symmetric(vertical: 10.0), // 텍스트 필드 내부 패딩
+        contentPadding: EdgeInsets.symmetric(vertical: 10.0),
       ),
-      style: TextStyle(color: Colors.black87), // 입력 텍스트 색상
-      cursorColor: Colors.blueAccent, // 커서 색상
+      style: TextStyle(color: Colors.black87),
+      cursorColor: Colors.blueAccent,
     );
   }
 }

@@ -119,7 +119,7 @@ class QuizResultOverlay extends StatelessWidget {
                     // '다음 문제' 또는 '퀴즈 정리하기' 버튼
                     ElevatedButton(
                       // 마지막 문제인지 여부에 따라 버튼 텍스트와 기능 변경
-                      child: Text(isLastProblem ? "퀴즈 정리하기" : "다음 문제"),
+                      child: Text(isLastProblem ? "퀴즈 정리" : "다음 문제"),
                       onPressed: isLastProblem ? onShowSummary : onNextProblem,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
