@@ -25,7 +25,14 @@ class QuizProblem {
 enum QuizState { viewingQuestion, showingResult, viewingSummary }
 
 class QuizScreen extends StatefulWidget {
-  const QuizScreen({Key? key}) : super(key: key);
+  final ValueChanged<bool> onToggleQuizMode;
+  final ValueChanged<bool> onToggleKingPosition;
+
+  const QuizScreen({
+    Key? key,
+    required this.onToggleQuizMode,
+    required this.onToggleKingPosition,
+  }) : super(key: key);
 
   @override
   State<QuizScreen> createState() => _QuizScreenState();
@@ -99,103 +106,142 @@ class _QuizScreenState extends State<QuizScreen> {
     });
   }
 
-
   @override
   Widget build(BuildContext context) {
     bool isLastProblem = _currentProblemIndex == _problems.length - 1;
 
-    // Stack을 사용해 문제 화면과 결과 화면을 겹침
-    return Stack(
-      children: [
-        // 1. 퀴즈 본체 (문제 또는 최종 정리)
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: _quizState == QuizState.viewingSummary
-              ? QuizSummaryView( // '정리' 화면
-            problems: _problems,
-            onRestart: _restartQuiz,
-          )
-              : _buildQuestionView(), // '문제' 화면
-        ),
-
-        // 2. 결과 오버레이 (결과 보여주기 상태일 때만)
-        if (_quizState == QuizState.showingResult)
-          QuizResultOverlay(
-            isCorrect: _isCorrect,
-            explanation: _problems[_currentProblemIndex].explanation,
-            isLastProblem: isLastProblem,
-            onNextProblem: _nextProblem,
-            onShowSummary: _showSummary,
-            onTryAgain: _restartQuiz, // '질문하기' 버튼 -> 퀴즈 재시작
-          ),
-      ],
-    );
-  }
-
-  // '문제' 화면을 그리는 위젯 (이미지 1)
-  Widget _buildQuestionView() {
-    QuizProblem currentProblem = _problems[_currentProblemIndex];
-
+    // ----------------------------------------------------
+    // ▼ [수정 2] 퀴즈 화면 전체를 파란색 테두리 컨테이너로 감싸기
+    //    (상단 버튼들이 항상 표시되도록)
+    // ----------------------------------------------------
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20.0),
+      height: double.infinity,
+      margin: const EdgeInsets.all(16.0), // Stack 밖으로 margin 이동
+      padding: const EdgeInsets.all(20.0), // Stack 밖으로 padding 이동
       decoration: BoxDecoration(
         color: Colors.blue.withOpacity(0.1),
         borderRadius: BorderRadius.circular(15.0),
         border: Border.all(color: Colors.blue, width: 2),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column( // Column 구조로 변경
         children: [
-          // 퀴즈 상단바 (좌우 화살표, 닫기)
+          // 1. 퀴즈 상단바 (<, >, X 버튼)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
-                  Icon(Icons.arrow_back, color: Colors.grey),
+                  // ---------------------------------
+                  // ▼ [수정 3] '<' 버튼의 로직
+                  // ---------------------------------
+                  IconButton(
+                    icon: Icon(Icons.arrow_back, color: Colors.blue[700]),
+                    onPressed: () {
+                      if (_quizState == QuizState.viewingSummary) {
+                        // 1. 요약 화면일 때: '질문 정리' 창으로 이동
+                        widget.onToggleQuizMode(false);
+                      } else {
+                        // 2. 퀴즈 푸는 중일 때: 이전 문제로 이동
+
+                      }
+                    },
+                  ),
                   SizedBox(width: 8),
-                  Icon(Icons.arrow_forward, color: Colors.grey),
+                  // ---------------------------------
+                  // ▼ [수정 4] '>' 버튼의 로직
+                  // ---------------------------------
+                  IconButton(
+                    icon: Icon(Icons.arrow_forward, color: Colors.blue[700]),
+                    onPressed: () {
+                      // 다음 문제로 이동
+
+                    },
+                  ),
                 ],
               ),
-              Icon(Icons.close, color: Colors.black),
+              // [!] 'X' 버튼은 언제든 '질문 정리' 창으로 이동
+              IconButton(
+                icon: Icon(Icons.close, color: Colors.black),
+                onPressed: () {
+                  widget.onToggleQuizMode(false);
+                },
+              ),
             ],
           ),
 
-          // 문제 텍스트
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 40.0),
-            child: Text(
-              currentProblem.question,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-          ),
+          // 2. 퀴즈/요약/결과 화면이 표시될 영역
+          Expanded(
+            child: Stack(
+              children: [
+                // 2-1. 퀴즈 본체 (문제 또는 최종 정리)
+                // [!] Padding 제거
+                _quizState == QuizState.viewingSummary
+                    ? QuizSummaryView(
+                  problems: _problems,
+                  onRestart: _restartQuiz,
+                )
+                    : _buildQuestionView(), // '문제' 화면
 
-          // O / X 버튼
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildOxButton("O", _selectedAnswer == true),
-              SizedBox(width: 20),
-              _buildOxButton("X", _selectedAnswer == false),
-            ],
-          ),
-
-          SizedBox(height: 20),
-
-          // 제출 버튼
-          ElevatedButton(
-            child: Text("제출"),
-            onPressed: _submitAnswer,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-              minimumSize: Size(100, 40),
+                // 2-2. 결과 오버레이 (결과 보여주기 상태일 때만)
+                if (_quizState == QuizState.showingResult)
+                  QuizResultOverlay(
+                    isCorrect: _isCorrect,
+                    explanation: _problems[_currentProblemIndex].explanation,
+                    isLastProblem: isLastProblem,
+                    onNextProblem: _nextProblem,
+                    onShowSummary: _showSummary, // [!] 요약 화면으로 가는 함수
+                    onTryAgain: _restartQuiz,
+                  ),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildQuestionView() {
+    QuizProblem currentProblem = _problems[_currentProblemIndex];
+
+    // [!] Container, decoration, 상단바 Row가 build() 메서드로 이동했음
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      // [!] 상단바 Row가 없으므로 children[0]이 문제 텍스트
+      children: [
+        // 문제 텍스트
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 40.0),
+          child: Text(
+            currentProblem.question,
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+        ),
+
+        // O / X 버튼
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildOxButton("O", _selectedAnswer == true),
+            SizedBox(width: 20),
+            _buildOxButton("X", _selectedAnswer == false),
+          ],
+        ),
+
+        SizedBox(height: 20),
+
+        // 제출 버튼
+        ElevatedButton(
+          child: Text("제출"),
+          onPressed: _submitAnswer,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            minimumSize: Size(100, 40),
+          ),
+        ),
+      ],
     );
   }
 
