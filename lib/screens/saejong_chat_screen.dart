@@ -72,6 +72,8 @@ class _SaejongChatScreenState extends State<SaejongChatScreen> {
             icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
             onPressed: () {
               _scaffoldKey.currentState?.openEndDrawer();
+              _isKingCentered = false;
+              _toggleKingPosition(false);
             },
           ),
         ],

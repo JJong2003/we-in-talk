@@ -202,7 +202,10 @@ class _ChatViewState extends State<ChatView> {
             alignment: Alignment.centerLeft,
             child: IconButton(
               icon: const Icon(Icons.arrow_forward_ios),
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                Navigator.of(context).pop();
+                widget.onToggleKingPosition(true);
+              },
               iconSize: 20.0,
             ),
           ),
