@@ -18,6 +18,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // 마이크의 on/off 상태를 저장하는 변수 (false: OFFLINE, true: RECORDING)
   bool _isRecording = false;
 
+  // ⭐️ [필수] 이 코드가 있어야만 목록이 사라지지 않습니다.
+  final Widget _appDrawer = AppDrawer();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -31,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.menu_open),
             onPressed: () {
               // GlobalKey를 이용해 대화창 열기
-              // _scaffoldKey.currentState?.openDrawer();
+              _scaffoldKey.currentState?.openDrawer();
             },
           ),
         ],
@@ -52,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
       ),
       // 2. Drawer 연결
-      drawer: const AppDrawer(),
+      drawer: _appDrawer,
       // 3. Body (메인 컨텐츠)
       body: Center(
         // 3-1. 버튼 클릭 감지를 위한 GestureDetector
