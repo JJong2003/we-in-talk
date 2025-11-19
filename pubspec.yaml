@@ -94,6 +94,8 @@ flutter:
     - assets/images/kingsaejong/KingSaeJong_standing_photo.png
     - assets/images/kingsaejong/saejong_character.png
     - assets/images/kingsaejong/saejong_background.png
+    - assets/images/general_female.png
+    - assets/images/general_male.png
 
 #    - assets/logo/
     - assets/mp3/

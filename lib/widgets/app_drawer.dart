@@ -1,9 +1,13 @@
-// app_drawer.dart
-import 'package:flutter/material.dart';
-import '../screens/saejong_chat_screen.dart';
 // lib/widgets/app_drawer.dart
 
-// 1. ⭐️ (필수) StatefulWidget
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
+import '../screens/saejong_chat_screen.dart';
+import '../screens/universal_chat_screen.dart';
+import '../services/persona_generator_service.dart';
+
 class AppDrawer extends StatefulWidget {
   const AppDrawer({Key? key}) : super(key: key);
 
@@ -12,35 +16,24 @@ class AppDrawer extends StatefulWidget {
 }
 
 class _AppDrawerState extends State<AppDrawer> {
-  // 2. ⭐️ 대화 목록 '상태' 관리
-  final List<Map<String, dynamic>> _chatList = [
-    {'title': '세종대왕과 대화', 'isEditing': false},
-    {'title': '이순신과 대화', 'isEditing': false},
-    {'title': '장영실과 대화', 'isEditing': false},
-    {'title': '문익점과 대화', 'isEditing': false},
-    {'title': '유관순과 대화', 'isEditing': false},
-    {'title': '안중근과 대화', 'isEditing': false},
-    {'title': '방정환과 대화', 'isEditing': false},
-  ];
-
-  // 3. ⭐️ 편집용 컨트롤러와 포커스 노드
+  List<Map<String, dynamic>> _chatList = [];
+  StreamSubscription<DatabaseEvent>? _personaSubscription;
   late TextEditingController _editingController;
   late FocusNode _editingFocusNode;
+  final PersonaGeneratorService _personaGenerator = PersonaGeneratorService();
 
   @override
   void initState() {
     super.initState();
     _editingController = TextEditingController();
     _editingFocusNode = FocusNode();
+    _loadPersonasFromDB();
 
-    // 4. ⭐️ 포커스 해제 시 저장 리스너
     _editingFocusNode.addListener(() {
       if (!_editingFocusNode.hasFocus) {
-        final editingIndex = _chatList.indexWhere((item) => item['isEditing']);
-        if (editingIndex != -1 && mounted) {
-          setState(() {
-            _saveChatTitle(editingIndex);
-          });
+        final editingIndex = _chatList.indexWhere((item) => item['isEditing'] == true);
+        if (editingIndex != -1) {
+          _saveChatTitle(editingIndex);
         }
       }
     });
@@ -48,72 +41,181 @@ class _AppDrawerState extends State<AppDrawer> {
 
   @override
   void dispose() {
+    _personaSubscription?.cancel();
     _editingController.dispose();
     _editingFocusNode.dispose();
     super.dispose();
   }
 
-  // 5. ⭐️ (핵심) 새 대화 추가 및 Drawer 닫기
-  void _addNewChat() {
-    // 편집 중일 때는 새 대화 추가 방지
-    if (_chatList.any((item) => item['isEditing'])) return;
+  void _loadPersonasFromDB() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-    setState(() {
-      // '새 채팅' 항목을 '일반 모드'로 맨 위에 추가
-      _chatList.insert(0, {
-        'title': '새 채팅', // 기본 제목
-        'isEditing': false,
+    final ref = FirebaseDatabase.instance.ref("users/${user.uid}/personas");
+
+    _personaSubscription = ref.onValue.listen((event) {
+      final data = event.snapshot.value;
+      if (data == null) {
+        setState(() => _chatList = []);
+        return;
+      }
+
+      final Map<dynamic, dynamic> personasMap = data as Map<dynamic, dynamic>;
+      final List<Map<String, dynamic>> loadedList = [];
+
+      personasMap.forEach((key, value) {
+        loadedList.add({
+          "key": key,
+          "title": value['name'] ?? '이름 없음',
+          "desc": value['desc'] ?? '',
+          "prompt": value['prompt'],
+          "image": value['image'],
+          "voiceSettings": value['voiceSettings'],
+          "isEditing": false,
+        });
       });
-    });
 
-    // 항목 추가 후, 'HomeScreen'으로 돌아가기 (Drawer 닫기)
-    // Navigator.pop(context);
+      if (mounted) {
+        setState(() {
+          _chatList = loadedList;
+        });
+      }
+    });
   }
 
-  // 6. ⭐️ (수정/삭제 기능) 편집 모드 시작
-  void _startEditing(int index) {
-    if (_chatList.any((item) => item['isEditing'])) return;
+  // AI 소환 기능
+  void _addNewChat() {
+    final textController = TextEditingController();
+    bool isGenerating = false;
 
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text("새로운 역사 친구 소환"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text("궁금한 역사 사건이나 인물을 물어보세요.\nAI가 적절한 위인을 찾아줍니다!"),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: textController,
+                    decoration: const InputDecoration(
+                      hintText: "예: 거북선은 누가 만들었어?",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  if (isGenerating) ...[
+                    const SizedBox(height: 20),
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 10),
+                    const Text("역사 기록을 찾는 중..."),
+                  ]
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text("취소"),
+                ),
+                ElevatedButton(
+                  onPressed: isGenerating ? null : () async {
+                    final question = textController.text.trim();
+                    if (question.isEmpty) return;
+
+                    setStateDialog(() => isGenerating = true);
+
+                    final personaData = await _personaGenerator.generatePersonaFromQuestion(question);
+
+                    if (personaData != null) {
+                      String imagePath = "assets/images/general_male.png";
+                      if (personaData['gender'] == 'female') {
+                        imagePath = "assets/images/general_female.png";
+                      }
+
+                      final user = FirebaseAuth.instance.currentUser;
+                      if (user != null) {
+                        final newRef = FirebaseDatabase.instance
+                            .ref("users/${user.uid}/personas")
+                            .push();
+
+                        await newRef.set({
+                          "name": personaData['name'],
+                          "desc": personaData['desc'],
+                          "prompt": personaData['prompt'],
+                          "image": imagePath,
+                          "createdAt": DateTime.now().toIso8601String(),
+                          "voiceSettings": {"pitch": 1.0, "rate": 0.5}
+                        });
+                      }
+                      Navigator.pop(ctx);
+                    } else {
+                      setStateDialog(() => isGenerating = false);
+                    }
+                  },
+                  child: const Text("소환하기"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _startEditing(int index) {
     setState(() {
       _chatList[index]['isEditing'] = true;
       _editingController.text = _chatList[index]['title'];
     });
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _editingFocusNode.requestFocus();
     });
   }
 
-  // 7. ⭐️ (수정/삭제 기능) 편집 저장
   void _saveChatTitle(int index) {
-    String newTitle = _editingController.text.trim().isEmpty
-        ? '새 채팅'
-        : _editingController.text.trim();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-    _chatList[index]['title'] = newTitle;
-    _chatList[index]['isEditing'] = false;
+    String newTitle = _editingController.text.trim();
+    if (newTitle.isEmpty) newTitle = "이름 없음";
+
+    final key = _chatList[index]['key'];
+
+    FirebaseDatabase.instance.ref("users/${user.uid}/personas/$key").update({
+      "name": newTitle
+    });
+
+    setState(() {
+      _chatList[index]['isEditing'] = false;
+    });
     _editingFocusNode.unfocus();
   }
 
-  // 8. ⭐️ (수정/삭제 기능) 항목 삭제
   void _deleteItem(int index) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final key = _chatList[index]['key'];
+    final title = _chatList[index]['title'];
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('삭제 확인'),
-        content: Text("'${_chatList[index]['title']}' 대화를 정말 삭제하시겠습니까?"),
+        title: const Text('삭제 확인'),
+        content: Text("'$title' 님과 작별하시겠습니까?"),
         actions: [
           TextButton(
-            child: Text('취소'),
+            child: const Text('취소'),
             onPressed: () => Navigator.pop(ctx),
           ),
           TextButton(
-            child: Text('삭제', style: TextStyle(color: Colors.red)),
+            child: const Text('삭제', style: TextStyle(color: Colors.red)),
             onPressed: () {
               Navigator.pop(ctx);
-              setState(() {
-                _chatList.removeAt(index); // 리스트에서 제거
-              });
+              FirebaseDatabase.instance.ref("users/${user.uid}/personas/$key").remove();
             },
           ),
         ],
@@ -131,116 +233,87 @@ class _AppDrawerState extends State<AppDrawer> {
         removeTop: true,
         child: Column(
           children: [
-            // (고정) 헤더 (Container 사용 버전 - 동일)
             Container(
               width: double.infinity,
               padding: EdgeInsets.only(
-                top: statusBarHeight + 16.0,
-                left: 16.0,
-                right: 16.0,
-                bottom: 16.0,
+                top: statusBarHeight + 16.0, left: 16.0, right: 16.0, bottom: 16.0,
               ),
-              decoration: BoxDecoration(color: Colors.blue),
-              child: Text(
-                '이전 대화 목록',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+              decoration: const BoxDecoration(color: Colors.blue),
+              child: const Text(
+                '나의 역사 튜터들',
+                style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
               ),
             ),
 
-            // (고정) 새 대화 버튼
             ListTile(
-              leading:
-              const Icon(Icons.add_circle_outline, color: Colors.black87),
-              title: const Text(
-                '새 대화 시작하기',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              onTap: _addNewChat, // 👈 _addNewChat 함수 연결
+              leading: const Icon(Icons.add_circle_outline, color: Colors.black87),
+              title: const Text('새로운 위인 소환하기', style: TextStyle(fontWeight: FontWeight.bold)),
+              onTap: _addNewChat,
             ),
 
-            // 구분선
             const Divider(height: 1, thickness: 1),
 
-            // (스크롤) 나머지 대화 목록
             Expanded(
-              child: ListView.builder(
+              child: _chatList.isEmpty
+                  ? const Center(child: Text("등록된 가상인물이 없습니다."))
+                  : ListView.builder(
                 padding: EdgeInsets.zero,
                 itemCount: _chatList.length,
                 itemBuilder: (context, index) {
                   final chat = _chatList[index];
 
-                  // 9. ⭐️ 'isEditing'에 따라 분기
-                  if (chat['isEditing']) {
-                    // --- 편집 중일 때 (TextField) ---
-                    return Container(
-                      color: Colors.blue.withOpacity(0.1),
-                      padding: EdgeInsets.symmetric(horizontal: 4.0),
-                      child: ListTile(
-                        title: TextField(
-                          controller: _editingController,
-                          focusNode: _editingFocusNode,
-                          autofocus: true,
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            hintText: '대화 제목 입력...',
-                          ),
-                          onSubmitted: (value) {
-                            setState(() => _saveChatTitle(index));
-                          },
-                        ),
-                        trailing: IconButton(
-                          icon: Icon(Icons.check, color: Colors.green),
-                          onPressed: () {
-                            setState(() => _saveChatTitle(index));
-                          },
-                        ),
+                  // (A) 편집 모드
+                  if (chat['isEditing'] == true) {
+                    return ListTile(
+                      title: TextField(
+                        controller: _editingController,
+                        focusNode: _editingFocusNode,
+                        onSubmitted: (_) => _saveChatTitle(index),
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.check, color: Colors.green),
+                        onPressed: () => _saveChatTitle(index),
                       ),
                     );
-                  } else {
-                    // --- 일반 상태일 때 (Text) ---
+                  }
+                  // (B) 일반 모드
+                  else {
                     return ListTile(
-                      title: Text(chat['title']),
-                      // (보너스) 길게 눌러서 수정하기
-                      onLongPress: () {
-                        _startEditing(index);
-                      },
+                      // leading(프로필 사진) 부분 제거됨
+                      title: Text(chat['title'], style: const TextStyle(fontWeight: FontWeight.w500)),
+                      subtitle: Text(chat['desc'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
+
                       onTap: () {
-                        // (세종대왕만 이동하는 로직)
-                        if (chat['title'] == '세종대왕과 대화') {
+                        if (chat['title'].toString().contains('세종')) {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const SaejongChatScreen()),
+                          );
+                        } else {
                           Navigator.pop(context);
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const SaejongChatScreen(),
+                              builder: (context) => UniversalChatScreen(
+                                personaKey: chat['key'],
+                                personaData: Map<String, dynamic>.from(chat),
+                              ),
                             ),
                           );
-                        } else {
-                          // '새 채팅' 등 나머지는 그냥 닫기
-                          Navigator.pop(context);
                         }
                       },
-                      // 10. ⭐️ (수정/삭제 기능) 더보기(...) 버튼
-                      trailing: PopupMenuButton<String>(
-                        icon: Icon(Icons.more_vert),
-                        onSelected: (value) {
-                          if (value == 'edit') {
-                            _startEditing(index);
-                          } else if (value == 'delete') {
-                            _deleteItem(index);
-                          }
-                        },
-                        itemBuilder: (BuildContext context) => [
-                          PopupMenuItem(
-                            value: 'edit',
-                            child: Text('수정'),
+                      // 삭제/수정 버튼은 유지
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, size: 20, color: Colors.grey),
+                            onPressed: () => _startEditing(index),
                           ),
-                          PopupMenuItem(
-                            value: 'delete',
-                            child: Text('삭제'),
+                          IconButton(
+                            icon: const Icon(Icons.delete, size: 20, color: Colors.redAccent),
+                            onPressed: () => _deleteItem(index),
                           ),
                         ],
                       ),
@@ -255,128 +328,3 @@ class _AppDrawerState extends State<AppDrawer> {
     );
   }
 }
-/*
-class AppDrawer extends StatelessWidget { // (클래스 이름은 MyDrawer -> AppDrawer로 가정)
-  const AppDrawer({Key? key}) : super(key: key);
-
-  // 스크롤 기능 추가
-  @override
-  Widget build(BuildContext context) {
-    final double statusBarHeight = MediaQuery.of(context).padding.top;
-    return Drawer(
-      child: MediaQuery.removePadding(
-          context: context,
-          removeTop: true,
-        child: Column(
-          // Column으로 레이아웃을 분리
-          children: [
-            // 1. (고정) 헤더
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.only(
-                top: statusBarHeight + 16.0,
-                left: 16.0,
-                right: 16.0,
-                bottom: 16.0,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.blue,
-              ),
-              child: Text(
-                '이전 대화 목록',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-
-            // 2. (고정) 새 대화 버튼
-            ListTile(
-              leading: const Icon(Icons.add_circle_outline, color: Colors.black87),
-              title: const Text(
-                '새 대화 시작하기',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              onTap: () {
-                // TODO: 새 대화 시작 로직 구현 (예: 채팅방 초기화)
-                Navigator.pop(context); // Drawer 닫기
-              },
-            ),
-
-            // 구분선
-            const Divider(height: 1, thickness: 1),
-
-            Expanded(
-                child: ListView(
-                  padding: EdgeInsets.zero,
-                  children: [
-                    // 2. "세종대왕과 대화" ListTile 수정
-                    ListTile(
-                      title: const Text('세종대왕과 대화'),
-                      trailing: const Icon(Icons.more_vert),
-                      onTap: () {
-                        // 3. Drawer를 닫고
-                        Navigator.pop(context);
-                        // 4. SejongChatScreen으로 이동
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SaejongChatScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    // --- 나머지 ListTile들 ---
-                    ListTile(
-                      title: const Text('이순신과 대화'),
-                      trailing: const Icon(Icons.more_vert),
-                      onTap: () {
-                        Navigator.pop(context); // 일단 Drawer만 닫기
-                      },
-                    ),
-                    ListTile(
-                      title: const Text('장영실과 대화'),
-                      trailing: const Icon(Icons.more_vert),
-                      onTap: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                    ListTile(
-                      title: const Text('문익점과 대화'),
-                      trailing: const Icon(Icons.more_vert),
-                      onTap: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                    ListTile(
-                      title: const Text('유관순과 대화'),
-                      trailing: const Icon(Icons.more_vert),
-                      onTap: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                    ListTile(
-                      title: const Text('안중근과 대화'),
-                      trailing: const Icon(Icons.more_vert),
-                      onTap: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                    ListTile(
-                      title: const Text('방정환과 대화'),
-                      trailing: const Icon(Icons.more_vert),
-                      onTap: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                    // 리스트 추가 부분
-                  ],
-                )
-            )
-          ],
-        ),)
-    );
-  }
-}*/
