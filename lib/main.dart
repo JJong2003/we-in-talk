@@ -6,11 +6,20 @@ import 'screens/login_screen.dart'; // 기존 import
 // 1. Firebase Core와 Options import
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart'; // FlutterFire CLI가 생성한 파일
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // 2. main 함수를 'async' 비동기 함수로 변경
 Future<void> main() async {
   // 3. Flutter 엔진이 준비될 때까지 대기
   WidgetsFlutterBinding.ensureInitialized();
+
+  // .env 파일 로드
+  try {
+    await dotenv.load(fileName: ".env");
+    print("✅ .env 파일 로드 성공");
+  } catch (e) {
+    print("❌ .env 파일 로드 실패: $e");
+  }
 
   // 4. Firebase 앱 초기화 (가장 중요)
   // DefaultFirebaseOptions.currentPlatform을 사용하여 플랫폼에 맞는 설정 로드
