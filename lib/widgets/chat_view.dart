@@ -1,8 +1,14 @@
+// lib/widgets/chat_view.dart
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:dart_openai/dart_openai.dart';
+// [추가] Firebase 패키지 import
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
+
 import '../widgets/chat_bubble.dart';
 import '../widgets/quiz_bubble.dart';
 import '../services/azure_stt_service.dart';
@@ -34,16 +40,18 @@ class ChatView extends StatefulWidget {
 }
 
 class _ChatViewState extends State<ChatView> {
-  final List<ChatMessage> _chatHistory = [];
+  // 메시지 리스트 (화면 표시용)
+  List<ChatMessage> _chatHistory = [];
   final ScrollController _scrollController = ScrollController();
 
-  bool _isLoading = false; // 로딩 상태
+  bool _isLoading = false;
 
-  // 서비스 인스턴스
   final AzureSttService _azureSttService = AzureSttService();
   final FlutterTts _flutterTts = FlutterTts();
 
-  // 세종대왕 페르소나
+  // 세종대왕 전용 ID (회원가입 시 생성된 키와 일치해야 함)
+  final String _sejongKey = "persona_sejong";
+
   final String _systemPrompt =
       "너는 조선의 4대 왕, 세종대왕이다. "
       "너는 훈민정음을 창제하였으며, 백성을 매우 사랑한다. "
@@ -55,24 +63,20 @@ class _ChatViewState extends State<ChatView> {
   void initState() {
     super.initState();
     _initializeServices();
+    // [추가] 앱 시작 시 대화 기록 불러오기
+    _loadChatHistory();
   }
 
   Future<void> _initializeServices() async {
-    // 1. OpenAI 키 설정
     String? openAiKey = dotenv.env['OPENAI_API_KEY'];
     if (openAiKey != null && openAiKey.isNotEmpty) {
       OpenAI.apiKey = openAiKey;
-    } else {
-      print("⚠️ 경고: .env에 OPENAI_API_KEY가 없습니다.");
     }
 
-    // 2. TTS 설정 (최신 flutter_tts v4 대응)
     try {
       await _flutterTts.setLanguage("ko-KR");
-      await _flutterTts.setSpeechRate(0.4); // 세종대왕이므로 천천히
-      await _flutterTts.setPitch(0.9);      // 약간 낮은 톤
-
-      // iOS 오디오 설정 (무음 모드에서도 소리 나게)
+      await _flutterTts.setSpeechRate(0.4);
+      await _flutterTts.setPitch(0.9);
       await _flutterTts.setIosAudioCategory(
           IosTextToSpeechAudioCategory.playback,
           [
@@ -84,9 +88,57 @@ class _ChatViewState extends State<ChatView> {
     } catch (e) {
       print("TTS 초기화 오류: $e");
     }
+    // [변경] 여기서 첫 인사를 바로 하지 않고, _loadChatHistory에서 판단함
+  }
 
-    // 3. 첫 인사
-    _addMessage("과인이 조선의 임금, 이도니라. 백성아, 무엇이 궁금하느냐?", isUser: false);
+  // [추가] DB에서 대화 기록 불러오기
+  void _loadChatHistory() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // 세종대왕 채팅 기록 경로 (UniversalChatScreen과 동일한 구조)
+    final ref = FirebaseDatabase.instance
+        .ref("users/${user.uid}/personas/$_sejongKey/chat_history");
+
+    ref.orderByKey().limitToLast(50).get().then((snapshot) {
+      if (snapshot.exists) {
+        final data = snapshot.value as Map<dynamic, dynamic>;
+        // 시간순 정렬
+        final sortedKeys = data.keys.toList()..sort();
+
+        final List<ChatMessage> loaded = [];
+        for (var key in sortedKeys) {
+          final value = data[key];
+          loaded.add(ChatMessage(
+            text: value['text'],
+            isUser: value['isUser'] ?? true,
+          ));
+        }
+
+        setState(() => _chatHistory = loaded);
+        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+      } else {
+        // 기록이 없을 때만 첫 인사
+        String greeting = "과인이 조선의 임금, 이도니라. 백성아, 무엇이 궁금하느냐?";
+        _addMessage(greeting, isUser: false); // 화면 표시
+        _saveMessageToDB(greeting, false);    // DB 저장
+      }
+    });
+  }
+
+  // [추가] 메시지 DB 저장 함수
+  void _saveMessageToDB(String text, bool isUser) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    FirebaseDatabase.instance
+        .ref("users/${user.uid}/personas/$_sejongKey/chat_history")
+        .push()
+        .set({
+      "text": text,
+      "isUser": isUser,
+      "timestamp": ServerValue.timestamp,
+    });
   }
 
   @override
@@ -97,52 +149,40 @@ class _ChatViewState extends State<ChatView> {
     super.dispose();
   }
 
-  // [상태 감지] 부모 위젯의 마이크 버튼 상태 변화 감지
   @override
   void didUpdateWidget(covariant ChatView oldWidget) {
     super.didUpdateWidget(oldWidget);
 
     if (!widget.isQuizMode) {
-      // 녹음 상태가 변경되었을 때
       if (widget.isRecording != oldWidget.isRecording) {
         if (widget.isRecording) {
-          // false -> true : 녹음 시작
           _startListening();
         } else {
-          // true -> false : 녹음 종료 및 처리
           _stopListeningAndProcess();
         }
-      }
-    } else {
-      // 퀴즈 모드 진입 시 녹음 중이면 강제 종료
-      if (widget.isQuizMode && widget.isRecording) {
-        // 필요한 경우 로직 추가
       }
     }
   }
 
-  // 1. 녹음 시작
   Future<void> _startListening() async {
-    await _flutterTts.stop(); // 말하고 있었다면 중단
+    await _flutterTts.stop();
     await _azureSttService.startRecording();
   }
 
-  // 2. 녹음 종료 -> Azure -> GPT -> TTS 흐름
   Future<void> _stopListeningAndProcess() async {
-    setState(() => _isLoading = true); // 로딩 바 표시
+    setState(() => _isLoading = true);
 
     try {
-      // A. Azure STT로 텍스트 변환
       String? userText = await _azureSttService.stopRecordingAndGetText();
 
       if (userText != null && userText.isNotEmpty) {
-        // B. 사용자 말풍선 추가
+        // 1. 사용자 메시지 처리
         _addMessage(userText, isUser: true);
+        _saveMessageToDB(userText, true); // [추가] DB 저장
 
-        // C. GPT에게 질문
+        // 2. GPT 요청
         await _sendToOpenAI();
       } else {
-        // 인식이 안 됐을 때 (침묵 등)
         print("음성 인식 결과 없음");
       }
     } catch (e) {
@@ -151,14 +191,12 @@ class _ChatViewState extends State<ChatView> {
         const SnackBar(content: Text("통신 중 오류가 발생하였소.")),
       );
     } finally {
-      setState(() => _isLoading = false); // 로딩 바 숨김
+      setState(() => _isLoading = false);
     }
   }
 
-  // 3. OpenAI 통신
   Future<void> _sendToOpenAI() async {
     try {
-      // 대화 내역을 OpenAI 포맷으로 변환
       final systemMessage = OpenAIChatCompletionChoiceMessageModel(
         role: OpenAIChatMessageRole.system,
         content: [
@@ -166,6 +204,8 @@ class _ChatViewState extends State<ChatView> {
         ],
       );
 
+      // [변경] 현재 로드된 대화 기록을 GPT에 전달 (기억력 추가)
+      // 너무 길면 최근 10개 정도만 자르는 로직을 넣어도 좋습니다.
       final historyMessages = _chatHistory.map((msg) {
         return OpenAIChatCompletionChoiceMessageModel(
           role: msg.isUser ? OpenAIChatMessageRole.user : OpenAIChatMessageRole.assistant,
@@ -175,18 +215,18 @@ class _ChatViewState extends State<ChatView> {
         );
       }).toList();
 
-      // API 요청 (gpt-4o-mini 사용 추천 - 속도/비용 효율적)
       final response = await OpenAI.instance.chat.create(
         model: 'gpt-4o-mini',
         messages: [systemMessage, ...historyMessages],
-        maxTokens: 250, // 답변 길이 제한
+        maxTokens: 250,
       );
 
       final botResponse = response.choices.first.message.content?.first.text;
 
       if (botResponse != null) {
-        // D. 답변 표시 및 읽기
+        // 3. 봇 응답 처리
         _addMessage(botResponse, isUser: false);
+        _saveMessageToDB(botResponse, false); // [추가] DB 저장
         _speak(botResponse);
       }
     } catch (e) {
@@ -195,18 +235,19 @@ class _ChatViewState extends State<ChatView> {
     }
   }
 
-  // 4. TTS 읽기
   Future<void> _speak(String text) async {
-    if (widget.isRecording) return; // 녹음 중엔 말하지 않음
+    if (widget.isRecording) return;
     await _flutterTts.speak(text);
   }
 
-  // UI 업데이트 헬퍼
   void _addMessage(String text, {required bool isUser}) {
     setState(() {
       _chatHistory.add(ChatMessage(text: text, isUser: isUser));
     });
-    // 스크롤 최하단으로 이동
+    _scrollToBottom();
+  }
+
+  void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -220,7 +261,6 @@ class _ChatViewState extends State<ChatView> {
 
   @override
   Widget build(BuildContext context) {
-    // (이 부분은 기존 UI 구조와 동일합니다)
     return SafeArea(
       child: Container(
         color: Colors.white,
@@ -257,12 +297,10 @@ class _ChatViewState extends State<ChatView> {
             itemCount: _chatHistory.length,
             itemBuilder: (context, index) {
               final msg = _chatHistory[index];
-              // 이미 만들어둔 ChatBubble 위젯 사용
               return ChatBubble(text: msg.text, isUser: msg.isUser);
             },
           ),
         ),
-        // 로딩 인디케이터
         if (_isLoading)
           const Padding(
             padding: EdgeInsets.all(8.0),
@@ -271,7 +309,6 @@ class _ChatViewState extends State<ChatView> {
                 color: Colors.blue
             ),
           ),
-        // 녹음 중 상태 메시지
         if (widget.isRecording)
           Padding(
             padding: const EdgeInsets.all(8.0),
@@ -284,7 +321,6 @@ class _ChatViewState extends State<ChatView> {
     );
   }
 
-  // 기존 마이크 버튼 위젯 재사용
   Widget _buildMicrophoneControl() {
     return GestureDetector(
       onTap: widget.onToggleRecording,
@@ -319,7 +355,36 @@ class _ChatViewState extends State<ChatView> {
   }
 
   Widget _buildTopTabBar({required BuildContext context, required bool isQuizActive, required VoidCallback onQuizTap, required VoidCallback onChatTap}) {
-    // 기존 코드 유지
-    return Container(height: 50);
+    return Container(
+      height: 50,
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: onChatTap,
+              child: Container(
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: !isQuizActive ? Colors.blue : Colors.grey.shade300, width: 3)),
+                ),
+                child: Text("대화하기", style: TextStyle(fontWeight: FontWeight.bold, color: !isQuizActive ? Colors.blue : Colors.grey)),
+              ),
+            ),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: onQuizTap,
+              child: Container(
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: isQuizActive ? Colors.blue : Colors.grey.shade300, width: 3)),
+                ),
+                child: Text("역사 퀴즈", style: TextStyle(fontWeight: FontWeight.bold, color: isQuizActive ? Colors.blue : Colors.grey)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
