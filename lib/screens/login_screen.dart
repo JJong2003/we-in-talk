@@ -2,12 +2,10 @@
 //아이디 admin@naver.com 비번 123456
 
 import 'package:flutter/material.dart';
-// 1. Firebase Auth와 HomeScreen import
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:weintalk/screens/home_screen.dart';
 import 'package:weintalk/screens/signup_screen.dart';
 
-// 2. StatelessWidget -> StatefulWidget으로 변경
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -16,14 +14,10 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // 3. ID(Email)와 비밀번호 컨트롤러 선언
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-
-  // 4. 로딩 상태 변수
   bool _isLoading = false;
 
-  // 5. 컨트롤러 리소스 해제
   @override
   void dispose() {
     _emailController.dispose();
@@ -31,29 +25,21 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // 6. Firebase 로그인 로직 함수
   Future<void> _signIn() async {
-    // 7. 로딩 시작
     setState(() {
       _isLoading = true;
     });
 
-    // [추가] userName 읽어 오는 부분
     try {
-      // 8. Firebase Auth로 로그인 시도
-      // (중요!) Firebase Auth는 '아이디'가 아닌 '이메일'로 로그인합니다.
       UserCredential userCredential =
-          await FirebaseAuth.instance.signInWithEmailAndPassword(
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // 로그인한 사용자 정보에서 이름 가져오기
       User? user = userCredential.user;
-      // default userName (이름이 없을 경우)
       String userName = user?.displayName ?? "김철수";
 
-      // 9. 로그인 성공 시 HomeScreen으로 이동 (pushReplacement)
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -61,7 +47,6 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
-      // 10. 에러 처리
       String errorMessage = '로그인에 실패했습니다.';
       if (e is FirebaseAuthException) {
         if (e.code == 'invalid-credential' || e.code == 'wrong-password') {
@@ -79,7 +64,6 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } finally {
-      // 11. 로딩 종료
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -90,15 +74,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // [main.dart의 Theme 설정을 따름]
+    const Color primaryNavy = Color(0xFF1A237E);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // 크림색 배경
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 40.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // --- 1. 로고 이미지 (동일) ---
+              // --- 1. 로고 이미지 ---
               Container(
                 width: 250,
                 height: 200,
@@ -132,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Expanded(
                       child: Column(
                         children: [
-                          // 12. 컨트롤러 연결
+                          // TextField는 main.dart의 InputDecorationTheme를 따름
                           _buildTextField(Icons.person_outline, '아이디 (이메일)', _emailController),
                           const SizedBox(height: 12),
                           _buildTextField(Icons.lock_outline, '비밀번호', _passwordController, isPassword: true),
@@ -143,20 +130,20 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(
                       height: 116,
                       child: ElevatedButton(
-                        // 13. onPressed에 _signIn 함수 연결 (로딩 중 비활성화)
                         onPressed: _isLoading ? null : _signIn,
+                        // [디자인 변경] primaryNavy는 Theme에서 자동 상속 받음
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xFF333333),
+                          // backgroundColor: primaryNavy, // Theme에서 상속
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12), // 좀 더 둥글게
                           ),
                           padding: EdgeInsets.symmetric(horizontal: 24),
+                          elevation: 0, // 입체감은 Theme에서 관리
                         ),
-                        // 14. 로딩 중이면 인디케이터 표시
                         child: _isLoading
                             ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text('로그인'),
+                            : const Text('로그인', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],
@@ -164,10 +151,9 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 30),
 
-              // --- 3. 계정 생성하기 텍스트 버튼 (동일) ---
+              // --- 3. 계정 생성하기 텍스트 버튼 ---
               TextButton(
                 onPressed: () {
-                  print('계정 생성하기 클릭됨');
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => SignupScreen()),
@@ -176,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Text(
                   '계정 생성하기',
                   style: TextStyle(
-                    color: Colors.grey[700],
+                    color: primaryNavy, // 네이비색 포인트
                     decoration: TextDecoration.underline,
                     fontSize: 14,
                   ),
@@ -189,25 +175,20 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // 15. _buildTextField 함수가 컨트롤러를 받도록 수정
+  // [디자인 변경] InputTheme을 사용하도록 TextField의 Decoration을 단순화
   Widget _buildTextField(IconData icon, String hintText, TextEditingController controller, {bool isPassword = false}) {
     return TextField(
-      controller: controller, // 컨트롤러 연결
+      controller: controller,
       obscureText: isPassword,
+      // Decoration을 비워두어 main.dart의 InputDecorationTheme를 상속받게 함
       decoration: InputDecoration(
         prefixIcon: Icon(icon, color: Colors.grey[600]),
         hintText: hintText,
         hintStyle: TextStyle(color: Colors.grey[400]),
-        enabledBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.grey[400]!),
-        ),
-        focusedBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.blueAccent),
-        ),
-        contentPadding: EdgeInsets.symmetric(vertical: 10.0),
+        // 나머지 border 관련 설정은 Theme에서 가져옴
       ),
       style: TextStyle(color: Colors.black87),
-      cursorColor: Colors.blueAccent,
+      cursorColor: Theme.of(context).primaryColor,
     );
   }
 }

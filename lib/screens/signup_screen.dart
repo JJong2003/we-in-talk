@@ -36,14 +36,14 @@ class _SignupScreenState extends State<SignupScreen> {
         throw '비밀번호가 일치하지 않습니다.';
       }
 
-      // 1. 계정 생성
+      // 1. 계정 생성 (원본 로직 유지)
       UserCredential userCredential =
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // 2. DB에 기본 데이터 저장
+      // 2. DB에 기본 데이터 저장 (원본 로직 유지)
       if (userCredential.user != null) {
         String uid = userCredential.user!.uid;
         String name = _nameController.text.trim();
@@ -53,7 +53,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
         DatabaseReference userRef = FirebaseDatabase.instance.ref("users/$uid");
 
-        // ★★★ [수정된 부분] 세종대왕만 남기고 나머지는 삭제 ★★★
+        // ★ 세종대왕 기본 데이터 ★
         await userRef.set({
           "profile": {
             "name": name,
@@ -61,7 +61,6 @@ class _SignupScreenState extends State<SignupScreen> {
             "createdAt": DateTime.now().toIso8601String(),
           },
           "personas": {
-            // 1. 세종대왕 (앱의 메인 튜터 - 고정)
             "persona_sejong": {
               "id": "persona_sejong",
               "name": "세종대왕",
@@ -70,7 +69,6 @@ class _SignupScreenState extends State<SignupScreen> {
               "image": "assets/images/kingsaejong/sejong_character.png",
               "voiceSettings": {"pitch": 0.8, "rate": 0.4}
             }
-            // 이순신 장군은 여기서 삭제됨! (AI 소환으로 만남)
           }
         });
       }
@@ -99,12 +97,14 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  // ... build 함수 및 UI 코드는 기존과 동일 ...
   @override
   Widget build(BuildContext context) {
+    // Theme에서 네이비 색상 가져오기
+    final Color primaryNavy = Theme.of(context).primaryColor;
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(elevation: 0, backgroundColor: Colors.white, iconTheme: IconThemeData(color: Colors.black)),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(elevation: 0, backgroundColor: Colors.transparent, iconTheme: IconThemeData(color: Colors.black)),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(30),
@@ -131,6 +131,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 width: 320,
                 child: Column(
                   children: [
+                    // _buildInput은 main.dart의 Theme를 따름
                     _buildInput(Icons.email_outlined, "이메일 (로그인 ID)", _emailController),
                     const SizedBox(height: 12),
                     _buildInput(Icons.badge_outlined, "이름", _nameController),
@@ -141,18 +142,15 @@ class _SignupScreenState extends State<SignupScreen> {
 
                     const SizedBox(height: 40),
 
+                    // 버튼 (Theme 상속)
                     SizedBox(
                       width: double.infinity, height: 50,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _signUp,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF333330),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
+                        // style은 Theme에서 상속
                         child: _isLoading
                             ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text("계정 생성하기", style: TextStyle(fontSize: 16)),
+                            : const Text("계정 생성하기", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],
@@ -160,9 +158,17 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
 
               const SizedBox(height: 20),
+              // 로그인 버튼 (네이비색 포인트)
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text('이미 계정이 있으신가요? 로그인', style: TextStyle(color: Colors.grey[700], fontSize: 14)),
+                child: Text(
+                    '이미 계정이 있으신가요? 로그인',
+                    style: TextStyle(
+                        color: primaryNavy,
+                        fontSize: 14,
+                        decoration: TextDecoration.underline
+                    )
+                ),
               ),
             ],
           ),
@@ -171,20 +177,20 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
+  // [디자인 변경] TextField를 Theme에 맞게 단순화
   Widget _buildInput(IconData icon, String hint, TextEditingController ctrl, {bool isPw = false}) {
     return TextField(
       controller: ctrl,
       obscureText: isPw,
+      // Decoration을 비워두어 main.dart의 InputDecorationTheme를 상속받게 함
       decoration: InputDecoration(
         prefixIcon: Icon(icon, color: Colors.grey[600]),
         hintText: hint,
         hintStyle: TextStyle(color: Colors.grey[400]),
-        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey[400]!)),
-        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.blueAccent)),
-        contentPadding: const EdgeInsets.symmetric(vertical: 10.0),
+        // 나머지 border 관련 설정은 Theme에서 가져옴
       ),
       style: const TextStyle(color: Colors.black87),
-      cursorColor: Colors.blueAccent,
+      cursorColor: Theme.of(context).primaryColor,
     );
   }
 }
