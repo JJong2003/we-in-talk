@@ -1,8 +1,6 @@
-// lib/screens/saejong_chat_screen.dart
-
 import 'package:flutter/material.dart';
 import '../widgets/event_flow_widget.dart';
-import '../widgets/chat_view.dart';
+import '../widgets/chat_view.dart'; // [중요] 1단계에서 수정한 ChatView여야 합니다.
 
 class SaejongChatScreen extends StatefulWidget {
   const SaejongChatScreen({Key? key}) : super(key: key);
@@ -44,6 +42,7 @@ class _SaejongChatScreenState extends State<SaejongChatScreen> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
+
     final double panelWidth = screenSize.width * (_isQuizMode ? 0.55 : 0.35);
 
     final Alignment sejongAlignment;
@@ -59,6 +58,17 @@ class _SaejongChatScreenState extends State<SaejongChatScreen> {
       key: _scaffoldKey,
       drawerScrimColor: Colors.transparent,
       extendBodyBehindAppBar: true,
+
+      // [수정] 드로어가 닫힐 때 상태를 채팅 모드로 초기화하여 세종대왕 중앙 복귀
+      onEndDrawerChanged: (isOpen) {
+        if (!isOpen) {
+          setState(() {
+            _isQuizMode = false;
+            _isKingCentered = false;
+          });
+        }
+      },
+
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -71,12 +81,15 @@ class _SaejongChatScreenState extends State<SaejongChatScreen> {
             icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
             onPressed: () {
               _scaffoldKey.currentState?.openEndDrawer();
-              _isKingCentered = false;
-              _toggleKingPosition(false);
+              // 드로어를 열 때는 캐릭터 위치 초기화
+              setState(() {
+                _isKingCentered = false;
+              });
             },
           ),
         ],
       ),
+
       endDrawer: Drawer(
         width: panelWidth,
         child: ChatView(
@@ -87,8 +100,10 @@ class _SaejongChatScreenState extends State<SaejongChatScreen> {
           onToggleRecording: _toggleRecording,
         ),
       ),
+
       body: Stack(
         children: [
+          // 배경 이미지 (변동 없음)
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -97,11 +112,13 @@ class _SaejongChatScreenState extends State<SaejongChatScreen> {
               ),
             ),
           ),
+
+          // 세종대왕 캐릭터 (변동 없음)
           AnimatedAlign(
             alignment: sejongAlignment,
             duration: const Duration(milliseconds: 400),
             curve: Curves.easeInOut,
-            child: Container(
+            child: SizedBox(
               height: screenSize.height * 0.75,
               child: Image.asset(
                 "assets/images/kingsaejong/saejong_character.png",
@@ -109,6 +126,8 @@ class _SaejongChatScreenState extends State<SaejongChatScreen> {
               ),
             ),
           ),
+
+          // 사건 흐름 위젯 (EventFlowWidget)
           Positioned(
             top: kToolbarHeight + 16.0,
             left: 16.0,

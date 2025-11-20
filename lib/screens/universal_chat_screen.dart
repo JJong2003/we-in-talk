@@ -7,7 +7,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:dart_openai/dart_openai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-
+import 'package:flutter/services.dart';
 import '../widgets/chat_bubble.dart';
 import '../services/azure_stt_service.dart';
 
@@ -50,15 +50,12 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
     super.dispose();
   }
 
-  // ★★★ [수정된 부분] 복잡한 성우 찾기 제거하고 Pitch만 조절 ★★★
   Future<void> _initializeServices() async {
-    // 1. API Key 설정
     String apiKey = dotenv.env['OPENAI_API_KEY'] ?? "";
     if (apiKey.isNotEmpty) {
       OpenAI.apiKey = apiKey;
     }
 
-    // 2. 기본 언어 설정
     await _flutterTts.setLanguage("ko-KR");
 
     // 3. 성별에 따른 Pitch(톤) 단순 설정
@@ -76,7 +73,6 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
     await _flutterTts.setSpeechRate(0.5); // 속도는 조금 느리게 고정
   }
 
-  // --- [DB] 대화 기록 불러오기 ---
   void _loadChatHistory() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -114,7 +110,6 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
     });
   }
 
-  // --- [로직] 메시지 전송 및 GPT 통신 ---
   Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
@@ -150,6 +145,7 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
 
       final botReply = response.choices.first.message.content?.first.text ?? "말씀을 이해하지 못했소.";
 
+      // 2. 봇 응답 처리
       _addMessageToUI(botReply, isUser: false);
       _saveMessageToDB(botReply, false);
       _speak(botReply);
@@ -196,6 +192,8 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
   }
 
   void _toggleRecording() async {
+    HapticFeedback.lightImpact(); // [디자인 변경] 햅틱 추가
+
     if (_isRecording) {
       setState(() => _isRecording = false);
       setState(() => _isLoading = true);
@@ -212,12 +210,14 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
     } else {
       setState(() => _isRecording = true);
       _flutterTts.stop();
-      await _azureSttService.startRecording();
+      await _azureSttService.startRecording(); // [외부 연동 로직 유지]
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    const Color primaryNavy = Color(0xFF1A237E);
+    // [추가] AvatarGlow 사용을 위해 네이비 색상 상수 정의
     final String bgImage = widget.personaData['image'] ?? "assets/images/general_male.png";
 
     return Scaffold(
@@ -281,7 +281,8 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
               child: FractionallySizedBox(
                 widthFactor: 0.45,
                 child: Container(
-                  color: Colors.white.withOpacity(0.9),
+                  // [디자인 변경] 배경을 흰색 대신 크림색으로
+                  color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.95),
                   child: Column(
                     children: [
                       SizedBox(height: MediaQuery.of(context).padding.top + kToolbarHeight),
@@ -317,10 +318,13 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
                       if (_isLoading)
                         const Padding(
                           padding: EdgeInsets.all(8.0),
-                          child: CircularProgressIndicator(),
+                          child: LinearProgressIndicator(
+                              backgroundColor: Colors.grey,
+                              color: primaryNavy // [디자인 변경] 네이비색 로딩바
+                          ),
                         ),
 
-                      // 하단 마이크 버튼
+                      // ★ [핵심 수정] 하단 입력부를 '마이크 버튼 하나'로 변경
                       Container(
                         padding: const EdgeInsets.symmetric(vertical: 20),
                         alignment: Alignment.center,
@@ -329,16 +333,19 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
                         ),
                         child: GestureDetector(
                           onTap: _toggleRecording,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            width: 70, height: 70,
+                          // [디자인 변경] AvatarGlow (물결 애니메이션) 적용
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: _isRecording ? Colors.redAccent : Colors.blueAccent,
                               shape: BoxShape.circle,
+                              // [디자인 변경] 네이비색 그라데이션 적용
+                              color: _isRecording ? Colors.transparent : primaryNavy,
+                              gradient: _isRecording
+                                  ? const LinearGradient(colors: [primaryNavy, Color(0xFF3949AB)], begin: Alignment.topLeft, end: Alignment.bottomRight)
+                                  : null,
                               boxShadow: [
-                                BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, spreadRadius: 2)
+                                BoxShadow(color: primaryNavy.withOpacity(_isRecording ? 0.5 : 0.2), blurRadius: 8, spreadRadius: 2)
                               ],
-                              border: Border.all(color: Colors.white, width: 4),
                             ),
                             child: Icon(
                               _isRecording ? Icons.stop : Icons.mic,

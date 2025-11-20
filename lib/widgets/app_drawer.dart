@@ -90,7 +90,7 @@ class _AppDrawerState extends State<AppDrawer> {
     });
   }
 
-  // AI 소환 기능
+  // AI 소환 기능 (외부 연동 로직 유지)
   void _addNewChat() {
     final textController = TextEditingController();
     bool isGenerating = false;
@@ -100,6 +100,7 @@ class _AppDrawerState extends State<AppDrawer> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
+            // [디자인 수정] AlertDialog의 기본 스타일은 Theme을 따르지만, 텍스트 필드의 border를 Theme에 맞게 수정
             return AlertDialog(
               title: const Text("새로운 역사 친구 소환"),
               content: Column(
@@ -111,7 +112,7 @@ class _AppDrawerState extends State<AppDrawer> {
                     controller: textController,
                     decoration: const InputDecoration(
                       hintText: "예: 거북선은 누가 만들었어?",
-                      border: OutlineInputBorder(),
+                      // border: OutlineInputBorder(), <-- Theme에서 설정되므로 제거
                     ),
                   ),
                   if (isGenerating) ...[
@@ -134,6 +135,7 @@ class _AppDrawerState extends State<AppDrawer> {
 
                     setStateDialog(() => isGenerating = true);
 
+                    // [외부 연동] PersonaGeneratorService 호출 (로직 유지)
                     final personaData = await _personaGenerator.generatePersonaFromQuestion(question);
 
                     if (personaData != null) {
@@ -149,6 +151,7 @@ class _AppDrawerState extends State<AppDrawer> {
                             .ref("users/${user.uid}/personas")
                             .push();
 
+                        // [외부 연동] Firebase DB 저장 (로직 유지)
                         await newRef.set({
                           "name": personaData['name'],
                           "desc": personaData['desc'],
@@ -194,6 +197,7 @@ class _AppDrawerState extends State<AppDrawer> {
 
     final key = _chatList[index]['key'];
 
+    // [외부 연동] Firebase DB 저장 (로직 유지)
     FirebaseDatabase.instance.ref("users/${user.uid}/personas/$key").update({
       "name": newTitle
     });
@@ -225,6 +229,7 @@ class _AppDrawerState extends State<AppDrawer> {
             child: const Text('삭제', style: TextStyle(color: Colors.red)),
             onPressed: () {
               Navigator.pop(ctx);
+              // [외부 연동] Firebase DB 삭제 (로직 유지)
               FirebaseDatabase.instance.ref("users/${user.uid}/personas/$key").remove();
             },
           ),
@@ -235,6 +240,9 @@ class _AppDrawerState extends State<AppDrawer> {
 
   @override
   Widget build(BuildContext context) {
+    // [디자인 상수] 네이비 색상 정의
+    const Color primaryNavy = Color(0xFF1A237E);
+
     final double statusBarHeight = MediaQuery.of(context).padding.top;
 
     return Drawer(
@@ -243,12 +251,13 @@ class _AppDrawerState extends State<AppDrawer> {
         removeTop: true,
         child: Column(
           children: [
+            // [디자인 변경] 1. 헤더 배경색 변경
             Container(
               width: double.infinity,
               padding: EdgeInsets.only(
                 top: statusBarHeight + 16.0, left: 16.0, right: 16.0, bottom: 16.0,
               ),
-              decoration: const BoxDecoration(color: Colors.blue),
+              decoration: const BoxDecoration(color: primaryNavy), // 네이비색 적용
               child: const Text(
                 '나의 역사 튜터들',
                 style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
@@ -274,14 +283,16 @@ class _AppDrawerState extends State<AppDrawer> {
 
                   // (A) 편집 모드
                   if (chat['isEditing'] == true) {
+                    // 편집 모드의 입력창은 Theme의 InputDecorationTheme를 따름
                     return ListTile(
                       title: TextField(
                         controller: _editingController,
                         focusNode: _editingFocusNode,
                         onSubmitted: (_) => _saveChatTitle(index),
                       ),
+                      // [디자인 변경] 체크 아이콘 색상을 네이비로
                       trailing: IconButton(
-                        icon: const Icon(Icons.check, color: Colors.green),
+                        icon: const Icon(Icons.check, color: primaryNavy),
                         onPressed: () => _saveChatTitle(index),
                       ),
                     );

@@ -41,7 +41,7 @@ dependencies:
   cloud_firestore: ^5.4.4
   firebase_database: ^11.1.5
   google_sign_in: ^6.2.1   # 7.x는 너무 최신이라 충돌 가능성 있음
-
+  avatar_glow: ^3.0.1
   # [기능 구현용 - 최신 안정 버전]
   record: ^5.1.2              # 녹음 (v5.x 필수)
   flutter_tts: ^3.8.5        # TTS (v4.0 이상이어야 최신 안드로이드 지원)

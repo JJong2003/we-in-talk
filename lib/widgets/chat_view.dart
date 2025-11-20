@@ -12,6 +12,18 @@ import '../widgets/chat_bubble.dart';
 import '../widgets/quiz_bubble.dart';
 import '../services/azure_stt_service.dart';
 
+import 'package:flutter/services.dart'; // HapticFeedback 용
+import 'package:avatar_glow/avatar_glow.dart'; // 물결 애니메이션 용
+
+
+ class QuizScreen extends StatelessWidget {
+   final ValueChanged<bool> onToggleQuizMode;
+   final ValueChanged<bool> onToggleKingPosition;
+  const QuizScreen({required this.onToggleQuizMode, required this.onToggleKingPosition});
+  @override Widget build(BuildContext context) => const Center(child: Text("퀴즈 화면"));
+ }
+
+
 class ChatMessage {
   final String text;
   final bool isUser;
@@ -49,12 +61,17 @@ class _ChatViewState extends State<ChatView> {
 
   final String _sejongKey = "persona_sejong";
   final String _systemPrompt =
-      "너는 조선의 4대 왕, 세종대왕이다. 훈민정음을 창제하였으며, 백성을 매우 사랑한다. "
-      "말투는 '하노라', '하였느니라' 같은 하오체를 사용하라. 답변은 2~3문장으로 짧게 하라.";
+      "너는 조선의 4대 왕, 세종대왕이다. "
+      "너는 훈민정음을 창제하였으며, 백성을 매우 사랑한다. "
+      "말투는 항상 '하노라', '하였느니라' 같은 고풍스러운 하오체를 사용하라. "
+      "현대 문물(스마트폰, AI 등)에 대해서는 신기해하는 반응을 보여라. "
+      "답변은 2~3문장으로 간결하고 위엄 있게 하라.";
 
   @override
   void initState() {
     super.initState();
+    _initializeServices();
+    _loadChatHistory();
     _initializeServices().then((_) {
       _loadChatHistory();
     });
@@ -117,7 +134,6 @@ class _ChatViewState extends State<ChatView> {
         }
 
       } else {
-        // [첫 인사]
         String greeting = "과인이 조선의 임금, 이도니라. 백성아, 무엇이 궁금하느냐?";
         _addMessage(greeting, isUser: false);
         _saveMessageToDB(greeting, false);
@@ -169,7 +185,7 @@ class _ChatViewState extends State<ChatView> {
 
   Future<void> _startListening() async {
     await _flutterTts.stop();
-    await _azureSttService.startRecording();
+    await _azureSttService.startRecording(); // [외부 연동 로직 유지]
   }
 
   Future<void> _stopListeningAndProcess() async {
@@ -179,7 +195,11 @@ class _ChatViewState extends State<ChatView> {
       String? userText = await _azureSttService.stopRecordingAndGetText();
 
       if (userText != null && userText.isNotEmpty) {
+        // 1. 사용자 메시지 처리
         _addMessage(userText, isUser: true);
+        _saveMessageToDB(userText, true);
+
+        await _sendToOpenAI(); // [외부 연동 로직 유지]
         _saveMessageToDB(userText, true);
         await _sendToOpenAI();
       } else {
@@ -229,6 +249,8 @@ class _ChatViewState extends State<ChatView> {
   }
 
   Future<void> _speak(String text) async {
+    if (widget.isRecording) return;
+    await _flutterTts.speak(text); // [외부 연동 로직 유지]
     // [디버깅 로그 추가] 왜 안 말하는지 확인
     if (widget.isRecording) {
       print("📢 [TTS Skipped] 녹음 중이라서 말을 안 합니다.");
@@ -260,33 +282,33 @@ class _ChatViewState extends State<ChatView> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Container(
-        color: Colors.white,
-        child: Column(
-          children: [
-            _buildTopTabBar(
-              context: context,
-              isQuizActive: widget.isQuizMode,
-              onQuizTap: () => widget.onToggleQuizMode(true),
-              onChatTap: () => widget.onToggleQuizMode(false),
-            ),
-            Expanded(
-              child: widget.isQuizMode
-                  ? QuizScreen(
-                onToggleQuizMode: widget.onToggleQuizMode,
-                onToggleKingPosition: widget.onToggleKingPosition,
-              )
-                  : _buildChatLog(),
-            ),
-            if (!widget.isQuizMode) _buildMicrophoneControl(),
-          ],
-        ),
+      // [디자인 변경] Container의 color 삭제 (배경을 Theme에서 상속받게 함)
+      child: Column(
+        children: [
+          _buildTopTabBar(
+            context: context,
+            isQuizActive: widget.isQuizMode,
+            onQuizTap: () => widget.onToggleQuizMode(true),
+            onChatTap: () => widget.onToggleQuizMode(false),
+          ),
+          Expanded(
+            child: widget.isQuizMode
+                ? QuizScreen(
+              onToggleQuizMode: widget.onToggleQuizMode,
+              onToggleKingPosition: widget.onToggleKingPosition,
+            )
+                : _buildChatLog(),
+          ),
+          if (!widget.isQuizMode) _buildMicrophoneControl(),
+        ],
       ),
     );
   }
 
-  // ... (하단 위젯 빌드 함수들은 동일함)
   Widget _buildChatLog() {
+    // [디자인 상수] 네이비 색상 정의
+    const Color primaryNavy = Color(0xFF1A237E);
+
     return Column(
       children: [
         Expanded(
@@ -303,14 +325,21 @@ class _ChatViewState extends State<ChatView> {
         if (_isLoading)
           const Padding(
             padding: EdgeInsets.all(8.0),
-            child: LinearProgressIndicator(backgroundColor: Colors.grey, color: Colors.blue),
+            child: LinearProgressIndicator(
+                backgroundColor: Colors.grey,
+                color: primaryNavy // 네이비색 적용
+            ),
           ),
         if (widget.isRecording)
-          Padding(
-            padding: const EdgeInsets.all(8.0),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20.0), // 여백 추가
             child: Text(
                 "세종대왕님이 경청하고 계십니다...",
-                style: TextStyle(color: Colors.blue[800], fontWeight: FontWeight.bold)
+                style: TextStyle(
+                  color: primaryNavy, // 네이비색 적용
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                )
             ),
           ),
       ],
@@ -318,41 +347,68 @@ class _ChatViewState extends State<ChatView> {
   }
 
   Widget _buildMicrophoneControl() {
+    // [디자인 변경] 탭 시 진동 효과 추가
+    void handleTap() {
+      HapticFeedback.lightImpact();
+      widget.onToggleRecording();
+    }
+
+    // [디자인 변경] AvatarGlow (물결 애니메이션) 적용
+    const Color primaryNavy = Color(0xFF1A237E);
+
     return GestureDetector(
-      onTap: widget.onToggleRecording,
+      onTap: handleTap,
       child: Container(
-        color: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 16.0),
-        child: widget.isRecording ? _buildRecordingIcon() : _buildOfflineIcon(),
+        alignment: Alignment.center,
+        child: AvatarGlow(
+          animate: widget.isRecording,
+          glowColor: primaryNavy, // 네이비색 물결
+          duration: const Duration(milliseconds: 1000),
+          repeat: true,
+          glowRadiusFactor: 0.4,
+          child: widget.isRecording ? _buildRecordingIcon() : _buildOfflineIcon(),
+        ),
       ),
     );
   }
 
   Widget _buildOfflineIcon() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20), // 크기 조정
       decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.grey.shade800),
-      child: const Icon(Icons.mic_off, color: Colors.white, size: 32),
+      child: const Icon(Icons.mic_off, color: Colors.white, size: 35), // 아이콘 크기 조정
     );
   }
 
   Widget _buildRecordingIcon() {
+    // [디자인 변경] 네이비 그라데이션 적용
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.blue.shade600,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1A237E), Color(0xFF3949AB)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         boxShadow: [
-          BoxShadow(color: Colors.blue.withOpacity(0.5), blurRadius: 10.0, spreadRadius: 2.0),
+          BoxShadow(color: const Color(0xFF1A237E).withOpacity(0.5), blurRadius: 15.0, spreadRadius: 1.0),
         ],
       ),
-      child: const Icon(Icons.mic, color: Colors.white, size: 32),
+      child: const Icon(Icons.mic, color: Colors.white, size: 35),
     );
   }
 
   Widget _buildTopTabBar({required BuildContext context, required bool isQuizActive, required VoidCallback onQuizTap, required VoidCallback onChatTap}) {
+    // [디자인 변경] 탭바 색상 네이비로 변경
+    const navyColor = Color(0xFF1A237E);
+
     return Container(
       height: 50,
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.grey.shade300, width: 1)),
+      ),
       child: Row(
         children: [
           Expanded(
@@ -361,9 +417,9 @@ class _ChatViewState extends State<ChatView> {
               child: Container(
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: !isQuizActive ? Colors.blue : Colors.grey.shade300, width: 3)),
+                  border: Border(bottom: BorderSide(color: !isQuizActive ? navyColor : Colors.transparent, width: 3)),
                 ),
-                child: Text("대화하기", style: TextStyle(fontWeight: FontWeight.bold, color: !isQuizActive ? Colors.blue : Colors.grey)),
+                child: Text("대화하기", style: TextStyle(fontWeight: FontWeight.bold, color: !isQuizActive ? navyColor : Colors.grey)),
               ),
             ),
           ),
@@ -373,9 +429,9 @@ class _ChatViewState extends State<ChatView> {
               child: Container(
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: isQuizActive ? Colors.blue : Colors.grey.shade300, width: 3)),
+                  border: Border(bottom: BorderSide(color: isQuizActive ? navyColor : Colors.transparent, width: 3)),
                 ),
-                child: Text("역사 퀴즈", style: TextStyle(fontWeight: FontWeight.bold, color: isQuizActive ? Colors.blue : Colors.grey)),
+                child: Text("역사 퀴즈", style: TextStyle(fontWeight: FontWeight.bold, color: isQuizActive ? navyColor : Colors.grey)),
               ),
             ),
           ),
