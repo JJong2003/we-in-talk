@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:dart_openai/dart_openai.dart';
-// [추가] Firebase 패키지 import
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 
@@ -40,7 +39,6 @@ class ChatView extends StatefulWidget {
 }
 
 class _ChatViewState extends State<ChatView> {
-  // 메시지 리스트 (화면 표시용)
   List<ChatMessage> _chatHistory = [];
   final ScrollController _scrollController = ScrollController();
 
@@ -49,22 +47,17 @@ class _ChatViewState extends State<ChatView> {
   final AzureSttService _azureSttService = AzureSttService();
   final FlutterTts _flutterTts = FlutterTts();
 
-  // 세종대왕 전용 ID (회원가입 시 생성된 키와 일치해야 함)
   final String _sejongKey = "persona_sejong";
-
   final String _systemPrompt =
-      "너는 조선의 4대 왕, 세종대왕이다. "
-      "너는 훈민정음을 창제하였으며, 백성을 매우 사랑한다. "
-      "말투는 항상 '하노라', '하였느니라' 같은 고풍스러운 하오체를 사용하라. "
-      "현대 문물(스마트폰, AI 등)에 대해서는 신기해하는 반응을 보여라. "
-      "답변은 2~3문장으로 간결하고 위엄 있게 하라.";
+      "너는 조선의 4대 왕, 세종대왕이다. 훈민정음을 창제하였으며, 백성을 매우 사랑한다. "
+      "말투는 '하노라', '하였느니라' 같은 하오체를 사용하라. 답변은 2~3문장으로 짧게 하라.";
 
   @override
   void initState() {
     super.initState();
-    _initializeServices();
-    // [추가] 앱 시작 시 대화 기록 불러오기
-    _loadChatHistory();
+    _initializeServices().then((_) {
+      _loadChatHistory();
+    });
   }
 
   Future<void> _initializeServices() async {
@@ -76,7 +69,9 @@ class _ChatViewState extends State<ChatView> {
     try {
       await _flutterTts.setLanguage("ko-KR");
       await _flutterTts.setSpeechRate(0.4);
-      await _flutterTts.setPitch(0.9);
+      await _flutterTts.setPitch(0.6); // 굵은 목소리
+      await _flutterTts.setVolume(1.0); // 볼륨 최대
+
       await _flutterTts.setIosAudioCategory(
           IosTextToSpeechAudioCategory.playback,
           [
@@ -88,22 +83,18 @@ class _ChatViewState extends State<ChatView> {
     } catch (e) {
       print("TTS 초기화 오류: $e");
     }
-    // [변경] 여기서 첫 인사를 바로 하지 않고, _loadChatHistory에서 판단함
   }
 
-  // [추가] DB에서 대화 기록 불러오기
   void _loadChatHistory() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // 세종대왕 채팅 기록 경로 (UniversalChatScreen과 동일한 구조)
     final ref = FirebaseDatabase.instance
         .ref("users/${user.uid}/personas/$_sejongKey/chat_history");
 
     ref.orderByKey().limitToLast(50).get().then((snapshot) {
       if (snapshot.exists) {
         final data = snapshot.value as Map<dynamic, dynamic>;
-        // 시간순 정렬
         final sortedKeys = data.keys.toList()..sort();
 
         final List<ChatMessage> loaded = [];
@@ -117,16 +108,28 @@ class _ChatViewState extends State<ChatView> {
 
         setState(() => _chatHistory = loaded);
         WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+
+        // [수정] 대화가 딱 1개(인사말)만 있으면 다시 읽어줌 (1초 딜레이)
+        if (loaded.length == 1 && !loaded.last.isUser) {
+          Future.delayed(const Duration(seconds: 1), () {
+            _speak(loaded.last.text);
+          });
+        }
+
       } else {
-        // 기록이 없을 때만 첫 인사
+        // [첫 인사]
         String greeting = "과인이 조선의 임금, 이도니라. 백성아, 무엇이 궁금하느냐?";
-        _addMessage(greeting, isUser: false); // 화면 표시
-        _saveMessageToDB(greeting, false);    // DB 저장
+        _addMessage(greeting, isUser: false);
+        _saveMessageToDB(greeting, false);
+
+        // [수정] 1초 기다렸다가 말하기
+        Future.delayed(const Duration(seconds: 1), () {
+          _speak(greeting);
+        });
       }
     });
   }
 
-  // [추가] 메시지 DB 저장 함수
   void _saveMessageToDB(String text, bool isUser) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -176,11 +179,8 @@ class _ChatViewState extends State<ChatView> {
       String? userText = await _azureSttService.stopRecordingAndGetText();
 
       if (userText != null && userText.isNotEmpty) {
-        // 1. 사용자 메시지 처리
         _addMessage(userText, isUser: true);
-        _saveMessageToDB(userText, true); // [추가] DB 저장
-
-        // 2. GPT 요청
+        _saveMessageToDB(userText, true);
         await _sendToOpenAI();
       } else {
         print("음성 인식 결과 없음");
@@ -199,19 +199,13 @@ class _ChatViewState extends State<ChatView> {
     try {
       final systemMessage = OpenAIChatCompletionChoiceMessageModel(
         role: OpenAIChatMessageRole.system,
-        content: [
-          OpenAIChatCompletionChoiceMessageContentItemModel.text(_systemPrompt)
-        ],
+        content: [OpenAIChatCompletionChoiceMessageContentItemModel.text(_systemPrompt)],
       );
 
-      // [변경] 현재 로드된 대화 기록을 GPT에 전달 (기억력 추가)
-      // 너무 길면 최근 10개 정도만 자르는 로직을 넣어도 좋습니다.
       final historyMessages = _chatHistory.map((msg) {
         return OpenAIChatCompletionChoiceMessageModel(
           role: msg.isUser ? OpenAIChatMessageRole.user : OpenAIChatMessageRole.assistant,
-          content: [
-            OpenAIChatCompletionChoiceMessageContentItemModel.text(msg.text)
-          ],
+          content: [OpenAIChatCompletionChoiceMessageContentItemModel.text(msg.text)],
         );
       }).toList();
 
@@ -224,19 +218,23 @@ class _ChatViewState extends State<ChatView> {
       final botResponse = response.choices.first.message.content?.first.text;
 
       if (botResponse != null) {
-        // 3. 봇 응답 처리
         _addMessage(botResponse, isUser: false);
-        _saveMessageToDB(botResponse, false); // [추가] DB 저장
+        _saveMessageToDB(botResponse, false);
         _speak(botResponse);
       }
     } catch (e) {
       print("GPT API 오류: $e");
-      _addMessage("과인이 잠시 깊은 생각에 잠겼노라. 다시 말해주겠느냐?", isUser: false);
+      _addMessage("과인이 잠시 깊은 생각에 잠겼노라.", isUser: false);
     }
   }
 
   Future<void> _speak(String text) async {
-    if (widget.isRecording) return;
+    // [디버깅 로그 추가] 왜 안 말하는지 확인
+    if (widget.isRecording) {
+      print("📢 [TTS Skipped] 녹음 중이라서 말을 안 합니다.");
+      return;
+    }
+    print("🔊 [TTS Speaking] 말하기 시작: $text");
     await _flutterTts.speak(text);
   }
 
@@ -287,6 +285,7 @@ class _ChatViewState extends State<ChatView> {
     );
   }
 
+  // ... (하단 위젯 빌드 함수들은 동일함)
   Widget _buildChatLog() {
     return Column(
       children: [
@@ -304,10 +303,7 @@ class _ChatViewState extends State<ChatView> {
         if (_isLoading)
           const Padding(
             padding: EdgeInsets.all(8.0),
-            child: LinearProgressIndicator(
-                backgroundColor: Colors.grey,
-                color: Colors.blue
-            ),
+            child: LinearProgressIndicator(backgroundColor: Colors.grey, color: Colors.blue),
           ),
         if (widget.isRecording)
           Padding(

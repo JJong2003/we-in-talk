@@ -26,7 +26,6 @@ class UniversalChatScreen extends StatefulWidget {
 }
 
 class _UniversalChatScreenState extends State<UniversalChatScreen> {
-  // [삭제] 텍스트 입력용 컨트롤러 제거 (_textController)
   final ScrollController _scrollController = ScrollController();
   final AzureSttService _azureSttService = AzureSttService();
   final FlutterTts _flutterTts = FlutterTts();
@@ -51,16 +50,30 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
     super.dispose();
   }
 
+  // ★★★ [수정된 부분] 복잡한 성우 찾기 제거하고 Pitch만 조절 ★★★
   Future<void> _initializeServices() async {
+    // 1. API Key 설정
     String apiKey = dotenv.env['OPENAI_API_KEY'] ?? "";
     if (apiKey.isNotEmpty) {
       OpenAI.apiKey = apiKey;
     }
 
+    // 2. 기본 언어 설정
     await _flutterTts.setLanguage("ko-KR");
-    final voiceSettings = widget.personaData['voiceSettings'] ?? {'pitch': 1.0, 'rate': 0.5};
-    await _flutterTts.setPitch((voiceSettings['pitch'] as num).toDouble());
-    await _flutterTts.setSpeechRate((voiceSettings['rate'] as num).toDouble());
+
+    // 3. 성별에 따른 Pitch(톤) 단순 설정
+    String gender = widget.personaData['gender'] ?? 'male';
+
+    double targetPitch = 1.0;
+
+    if (gender == 'female') {
+      targetPitch = 1.2; // 여성이면 높게
+    } else {
+      targetPitch = 0.6; // 남성이면 낮게 (굵게)
+    }
+
+    await _flutterTts.setPitch(targetPitch);
+    await _flutterTts.setSpeechRate(0.5); // 속도는 조금 느리게 고정
   }
 
   // --- [DB] 대화 기록 불러오기 ---
@@ -90,7 +103,7 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
         WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
 
       } else {
-        // 대화 기록이 없으면 첫 인사
+        // 첫 인사
         String charName = widget.personaData['title'] ?? widget.personaData['name'] ?? '가상 인물';
         String greeting = "$charName이오. 무엇이 궁금하시오?";
 
@@ -105,9 +118,6 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
   Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
-    // [수정] 텍스트 컨트롤러 초기화 코드 삭제됨
-
-    // 1. 사용자 메시지 처리
     _addMessageToUI(text, isUser: true);
     _saveMessageToDB(text, true);
 
@@ -116,7 +126,6 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
     try {
       final systemPrompt = widget.personaData['prompt'] ?? "너는 역사적 인물이다.";
 
-      // 대화 맥락(History) 포함
       List<OpenAIChatCompletionChoiceMessageModel> requestMessages = [
         OpenAIChatCompletionChoiceMessageModel(
           role: OpenAIChatMessageRole.system,
@@ -141,7 +150,6 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
 
       final botReply = response.choices.first.message.content?.first.text ?? "말씀을 이해하지 못했소.";
 
-      // 2. 봇 응답 처리
       _addMessageToUI(botReply, isUser: false);
       _saveMessageToDB(botReply, false);
       _speak(botReply);
@@ -312,7 +320,7 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
                           child: CircularProgressIndicator(),
                         ),
 
-                      // ★ [핵심 수정] 하단 입력부를 '마이크 버튼 하나'로 변경
+                      // 하단 마이크 버튼
                       Container(
                         padding: const EdgeInsets.symmetric(vertical: 20),
                         alignment: Alignment.center,
@@ -323,7 +331,7 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
                           onTap: _toggleRecording,
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
-                            width: 70, height: 70, // 버튼 크기 키움
+                            width: 70, height: 70,
                             decoration: BoxDecoration(
                               color: _isRecording ? Colors.redAccent : Colors.blueAccent,
                               shape: BoxShape.circle,
@@ -339,7 +347,6 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
                           ),
                         ),
                       ),
-                      // 하단 안전 영역 확보
                       SizedBox(height: MediaQuery.of(context).viewInsets.bottom > 0 ? 0 : 20),
                     ],
                   ),

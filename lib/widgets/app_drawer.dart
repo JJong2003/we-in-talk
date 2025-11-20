@@ -64,6 +64,9 @@ class _AppDrawerState extends State<AppDrawer> {
       final List<Map<String, dynamic>> loadedList = [];
 
       personasMap.forEach((key, value) {
+        // [디버깅용 로그] 성별 정보가 잘 들어오는지 확인
+        print("[AppDrawer] 로드된 인물: ${value['name']}, 성별: ${value['gender']}");
+
         loadedList.add({
           "key": key,
           "title": value['name'] ?? '이름 없음',
@@ -71,6 +74,10 @@ class _AppDrawerState extends State<AppDrawer> {
           "prompt": value['prompt'],
           "image": value['image'],
           "voiceSettings": value['voiceSettings'],
+
+          // ★★★ [핵심] 성별 정보 가져오기 (없으면 기본값 'male')
+          "gender": value['gender'] ?? 'male',
+
           "isEditing": false,
         });
       });
@@ -131,6 +138,7 @@ class _AppDrawerState extends State<AppDrawer> {
 
                     if (personaData != null) {
                       String imagePath = "assets/images/general_male.png";
+                      // 성별에 따라 이미지 결정
                       if (personaData['gender'] == 'female') {
                         imagePath = "assets/images/general_female.png";
                       }
@@ -146,6 +154,8 @@ class _AppDrawerState extends State<AppDrawer> {
                           "desc": personaData['desc'],
                           "prompt": personaData['prompt'],
                           "image": imagePath,
+                          // ★ 생성 시 gender 저장
+                          "gender": personaData['gender'],
                           "createdAt": DateTime.now().toIso8601String(),
                           "voiceSettings": {"pitch": 1.0, "rate": 0.5}
                         });
@@ -279,7 +289,6 @@ class _AppDrawerState extends State<AppDrawer> {
                   // (B) 일반 모드
                   else {
                     return ListTile(
-                      // leading(프로필 사진) 부분 제거됨
                       title: Text(chat['title'], style: const TextStyle(fontWeight: FontWeight.w500)),
                       subtitle: Text(chat['desc'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
 
@@ -297,13 +306,13 @@ class _AppDrawerState extends State<AppDrawer> {
                             MaterialPageRoute(
                               builder: (context) => UniversalChatScreen(
                                 personaKey: chat['key'],
+                                // ★★★ gender가 포함된 Map 전달 ★★★
                                 personaData: Map<String, dynamic>.from(chat),
                               ),
                             ),
                           );
                         }
                       },
-                      // 삭제/수정 버튼은 유지
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
