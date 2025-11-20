@@ -22,108 +22,93 @@ class QuizResultOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 오버레이 색상 결정
-    Color primaryColor = isCorrect ? Colors.green : Colors.red;
+    // [디자인 변경] 차분한 색상과 네이비색 정의
+    Color statusColor = isCorrect ? const Color(0xFF2E7D32) : const Color(0xFFC62828); // 청록/다홍
+    const Color primaryNavy = Color(0xFF1A237E);
     IconData iconData = isCorrect ? Icons.check_circle : Icons.cancel;
     String title = isCorrect ? "정답입니다!" : "오답입니다!";
 
     return Container(
-      // 1. 뒷배경을 어둡게 (딤드)
-      color: Colors.black.withOpacity(0.7),
+      // [디자인 변경] 뒷배경을 반투명 크림색으로 변경
+      color: const Color(0xFFFDFBF7).withOpacity(0.95),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // 2. '정답/오답' 아이콘 및 텍스트
-          Container(
-            padding: EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: primaryColor,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              children: [
-                Icon(isCorrect ? Icons.check : Icons.close, color: Colors.white, size: 80),
-                SizedBox(height: 16),
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    decoration: TextDecoration.none, // Text에 기본 적용되는 밑줄 제거
-                  ),
-                ),
-              ],
+          // 1. '정답/오답' 아이콘 및 텍스트 (직접적으로 배치)
+          Icon(iconData, color: statusColor, size: 80),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: TextStyle(
+              color: statusColor,
+              fontSize: 28, // 크기 조정
+              fontWeight: FontWeight.bold,
+              decoration: TextDecoration.none,
             ),
           ),
 
-          SizedBox(height: 20),
+          const SizedBox(height: 30),
 
-          // 3. 해설 및 버튼 카드
+          // 2. 해설 및 버튼 카드
           Container(
             width: double.infinity,
-            margin: EdgeInsets.symmetric(horizontal: 20),
-            padding: EdgeInsets.all(20),
+            margin: const EdgeInsets.symmetric(horizontal: 30), // 마진 조정
+            padding: const EdgeInsets.all(24), // 패딩 조정
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
             child: Column(
               children: [
-                // 해설 타이틀
-                Row(
-                  children: [
-                    Icon(iconData, color: primaryColor),
-                    SizedBox(width: 8),
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: primaryColor,
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8),
-                Divider(),
-                SizedBox(height: 8),
-
-                // 해설 텍스트
+                // 해설 본문 (타이틀/구분선 삭제, 본문 위주로)
                 Text(
                   explanation,
-                  style: TextStyle(
-                    fontSize: 15,
+                  style: const TextStyle(
+                    fontSize: 16,
                     color: Colors.black87,
-                    height: 1.4,
+                    height: 1.6,
                     decoration: TextDecoration.none,
+                    fontWeight: FontWeight.w500,
                   ),
+                  textAlign: TextAlign.center,
                 ),
-                SizedBox(height: 20),
+                const SizedBox(height: 30),
 
                 // 버튼 영역
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    // '질문하기' (퀴즈 재시작) 버튼
-                    ElevatedButton(
-                      child: Text("질문 하기"),
-                      onPressed: onTryAgain,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey[300],
-                        foregroundColor: Colors.black54,
+                    // '다시 풀기' 버튼 (회색)
+                    Expanded(
+                      child: ElevatedButton(
+                        child: const Text("다시 풀기"),
+                        onPressed: onTryAgain,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey[200],
+                          foregroundColor: Colors.black54,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
                       ),
                     ),
-
-                    // '다음 문제' 또는 '퀴즈 정리하기' 버튼
-                    ElevatedButton(
-                      // 마지막 문제인지 여부에 따라 버튼 텍스트와 기능 변경
-                      child: Text(isLastProblem ? "퀴즈 정리" : "다음 문제"),
-                      onPressed: isLastProblem ? onShowSummary : onNextProblem,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
+                    const SizedBox(width: 12),
+                    // '다음 문제' 또는 '퀴즈 정리하기' 버튼 (네이비)
+                    Expanded(
+                      child: ElevatedButton(
+                        child: Text(isLastProblem ? "결과 보기" : "다음 문제"), // 텍스트 변경
+                        onPressed: isLastProblem ? onShowSummary : onNextProblem,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryNavy, // 네이비색 적용
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
                       ),
                     ),
                   ],

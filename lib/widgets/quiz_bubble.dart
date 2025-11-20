@@ -42,7 +42,7 @@ class _QuizScreenState extends State<QuizScreen> {
   bool? _selectedAnswer; // O(true) 또는 X(false)
   bool _isCorrect = false;
 
-  // Mock 퀴즈 데이터
+  // Mock 퀴즈 데이터 (원본 유지)
   final List<QuizProblem> _problems = [
     QuizProblem(
         question: "1. 훈민정음이 창제되기 전에는 우리말을 표기할 문자가 있었다.",
@@ -67,7 +67,6 @@ class _QuizScreenState extends State<QuizScreen> {
     ),
   ];
 
-  // '제출' 버튼 클릭 시
   void _submitAnswer() {
     if (_selectedAnswer == null) return;
     setState(() {
@@ -76,7 +75,6 @@ class _QuizScreenState extends State<QuizScreen> {
     });
   }
 
-  // '다음 문제'로 이동 (결과 화면에서 사용)
   void _nextProblem() {
     if (_currentProblemIndex < _problems.length - 1) {
       setState(() {
@@ -85,28 +83,25 @@ class _QuizScreenState extends State<QuizScreen> {
         _quizState = QuizState.viewingQuestion;
       });
     } else {
-      // 마지막 문제였다면 요약 화면으로
       _showSummary();
     }
   }
 
-  // '이전 문제'로 이동 (화살표 버튼용)
   void _goToPreviousProblem() {
     if (_currentProblemIndex > 0) {
       setState(() {
         _currentProblemIndex--;
-        _selectedAnswer = null; // 문제 이동 시 선택 초기화
+        _selectedAnswer = null;
         _quizState = QuizState.viewingQuestion;
       });
     }
   }
 
-  // '다음 문제'로 이동 (화살표 버튼용)
   void _goToNextProblem() {
     if (_currentProblemIndex < _problems.length - 1) {
       setState(() {
         _currentProblemIndex++;
-        _selectedAnswer = null; // 문제 이동 시 선택 초기화
+        _selectedAnswer = null;
         _quizState = QuizState.viewingQuestion;
       });
     }
@@ -126,65 +121,60 @@ class _QuizScreenState extends State<QuizScreen> {
     });
   }
 
-  // [새로 추가] 현재 문제 다시 풀기 (인덱스 초기화 안 함)
   void _retryCurrentProblem() {
     setState(() {
-      // _currentProblemIndex = 0; // <--- 이 줄을 빼서 1번으로 안 돌아가게 함
-      _selectedAnswer = null;      // 선택한 답만 초기화
-      _quizState = QuizState.viewingQuestion; // 문제 화면으로 복귀
+      _selectedAnswer = null;
+      _quizState = QuizState.viewingQuestion;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     bool isLastProblem = _currentProblemIndex == _problems.length - 1;
+    const Color primaryNavy = Color(0xFF1A237E);
 
     return Container(
       width: double.infinity,
       height: double.infinity,
-      margin: const EdgeInsets.all(16.0),
-      padding: const EdgeInsets.all(20.0),
+      margin: const EdgeInsets.all(20.0), // 마진 조정
+      padding: const EdgeInsets.all(24.0), // 패딩 조정
       decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(15.0),
-        border: Border.all(color: Colors.blue, width: 2),
+        color: Colors.white, // [디자인 변경] 배경 흰색
+        borderRadius: BorderRadius.circular(24.0),
+        // [디자인 변경] 테두리 제거, 그림자 추가
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          // --------------------------------------------------------
-          // [수정 1] 상단바: 화살표 + 프로그레스 바 + 닫기 버튼
-          // --------------------------------------------------------
+          // 상단바: 화살표 + 프로그레스 바 + 닫기 버튼
           Row(
             children: [
-              // 1. 화살표 버튼 그룹
+              // 1. 화살표 버튼 그룹 (디자인 변경)
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: Icon(Icons.arrow_back,
-                        // 첫 번째 문제면 회색, 아니면 파란색
-                        color: _currentProblemIndex > 0 ? Colors.blue[700] : Colors.grey),
-                    onPressed: _goToPreviousProblem, // 이전 문제로 이동
+                    icon: Icon(Icons.arrow_back_ios, size: 18,
+                        color: _currentProblemIndex > 0 ? primaryNavy : Colors.grey[300]), // 네이비색 적용
+                    onPressed: _goToPreviousProblem,
                   ),
                   IconButton(
-                    icon: Icon(Icons.arrow_forward,
-                        // 마지막 문제면 회색, 아니면 파란색
-                        color: _currentProblemIndex < _problems.length - 1 ? Colors.blue[700] : Colors.grey),
-                    onPressed: _goToNextProblem, // 다음 문제로 이동
+                    icon: Icon(Icons.arrow_forward_ios, size: 18,
+                        color: _currentProblemIndex < _problems.length - 1 ? primaryNavy : Colors.grey[300]), // 네이비색 적용
+                    onPressed: _goToNextProblem,
                   ),
                 ],
               ),
-
-              const SizedBox(width: 16), // 간격
-
-              // 2. 프로그레스 바 (퀴즈 개수만큼 표시)
               Expanded(
                 child: _buildProgressBar(),
               ),
-
-              const SizedBox(width: 16), // 간격
-
-              // 3. 닫기 버튼
+              // 3. 닫기 버튼 (아이콘 변경)
               IconButton(
                 icon: const Icon(Icons.close, color: Colors.black),
                 onPressed: () {
@@ -194,13 +184,12 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
           ),
 
-          // --------------------------------------------------------
-          // [수정 2] 메인 컨텐츠 영역
-          // --------------------------------------------------------
+          const Divider(height: 30), // 구분선 추가
+
+          // 메인 컨텐츠 영역
           Expanded(
             child: Stack(
               children: [
-                // 2-1. 퀴즈 본체 or 요약
                 _quizState == QuizState.viewingSummary
                     ? QuizSummaryView(
                   problems: _problems,
@@ -211,7 +200,6 @@ class _QuizScreenState extends State<QuizScreen> {
                 )
                     : _buildQuestionView(),
 
-                // 2-2. 결과 오버레이
                 if (_quizState == QuizState.showingResult)
                   QuizResultOverlay(
                     isCorrect: _isCorrect,
@@ -219,10 +207,6 @@ class _QuizScreenState extends State<QuizScreen> {
                     isLastProblem: isLastProblem,
                     onNextProblem: _nextProblem,
                     onShowSummary: _showSummary,
-
-                    // ----------------------------------------------------
-                    // ▼ [수정] _restartQuiz 대신 _retryCurrentProblem 연결
-                    // ----------------------------------------------------
                     onTryAgain: _retryCurrentProblem,
                   ),
               ],
@@ -233,20 +217,22 @@ class _QuizScreenState extends State<QuizScreen> {
     );
   }
 
-  // [새로 추가] 프로그레스 바 위젯
+  // [디자인 변경] 프로그레스 바 색상
   Widget _buildProgressBar() {
+    const Color primaryNavy = Color(0xFF1A237E);
+
     return Row(
       children: List.generate(_problems.length, (index) {
-        // 현재 문제인지 확인
         bool isActive = index == _currentProblemIndex;
         return Expanded(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4.0), // 바 사이 간격
-            height: 6.0, // 바 높이
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            margin: const EdgeInsets.symmetric(horizontal: 4.0),
+            height: 8.0,
             decoration: BoxDecoration(
-              // 현재 문제는 파란색, 나머지는 연한 파란색(회색 느낌)
-              color: isActive ? Colors.blue : Colors.blue.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(3.0), // 둥근 모서리
+              // 네이비색 적용
+              color: isActive ? primaryNavy : Colors.grey[200],
+              borderRadius: BorderRadius.circular(4.0),
             ),
           ),
         );
@@ -254,83 +240,94 @@ class _QuizScreenState extends State<QuizScreen> {
     );
   }
 
+  // [디자인 변경] 질문 뷰
   Widget _buildQuestionView() {
     QuizProblem currentProblem = _problems[_currentProblemIndex];
+    const Color primaryNavy = Color(0xFF1A237E);
 
     return Column(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Spacer(flex: 1), // 위쪽 여백
-
-        // 문제 텍스트
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20.0),
-          child: Text(
-            currentProblem.question,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ),
+        const Spacer(flex: 1),
+        // Q 번호 강조
+        Text(
+          "Q${_currentProblemIndex + 1}.",
+          style: const TextStyle(color: primaryNavy, fontWeight: FontWeight.bold, fontSize: 20),
         ),
-
-        const Spacer(flex: 1), // 중간 여백
+        const SizedBox(height: 16),
+        // 문제 텍스트
+        Text(
+          currentProblem.question,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500, height: 1.4, color: Colors.black87),
+          textAlign: TextAlign.center,
+        ),
+        const Spacer(flex: 1),
 
         // O / X 버튼
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _buildOxButton("O", _selectedAnswer == true),
-            const SizedBox(width: 20),
+            const SizedBox(width: 24), // 간격 조정
             _buildOxButton("X", _selectedAnswer == false),
           ],
         ),
 
-        const Spacer(flex: 2), // 아래쪽 여백 (버튼을 위로 올림)
+        const Spacer(flex: 2),
 
         // 제출 버튼
-        Align(
-          alignment: Alignment.centerRight, // 오른쪽 정렬
+        SizedBox(
+          width: double.infinity, // 너비 확장
+          height: 56, // 높이 조정
           child: ElevatedButton(
             onPressed: _submitAnswer,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
+              backgroundColor: primaryNavy, // 네이비색 적용
               foregroundColor: Colors.white,
-              minimumSize: const Size(100, 40),
+              elevation: 0, // Theme에서 그림자 관리
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16), // 둥근 모서리
               ),
             ),
-            child: const Text("제출"),
+            child: const Text("정답 확인하기", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)), // 텍스트 변경
           ),
         ),
       ],
     );
   }
 
+  // [디자인 변경] O/X 버튼
   Widget _buildOxButton(String text, bool isSelected) {
+    const Color primaryNavy = Color(0xFF1A237E);
+
     return GestureDetector(
       onTap: () {
         setState(() {
           _selectedAnswer = (text == "O");
         });
       },
-      child: Container(
-        width: 80,
-        height: 80,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 100, // 크기 조정
+        height: 100, // 크기 조정
         decoration: BoxDecoration(
-          color: isSelected ? Colors.blue : Colors.grey[300],
-          borderRadius: BorderRadius.circular(12.0), // 둥근 사각형
+          color: isSelected ? primaryNavy : Colors.white, // 선택되면 네이비, 아니면 흰색
+          borderRadius: BorderRadius.circular(20.0),
           border: Border.all(
-            color: isSelected ? Colors.blue : Colors.grey,
+            color: isSelected ? Colors.transparent : Colors.grey.shade300,
             width: 2,
           ),
+          boxShadow: isSelected
+              ? [BoxShadow(color: primaryNavy.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))]
+              : [],
         ),
         child: Center(
           child: Text(
             text,
             style: TextStyle(
-              fontSize: 40,
+              fontSize: 48, // 크기 조정
               fontWeight: FontWeight.bold,
-              color: isSelected ? Colors.white : Colors.black54,
+              color: isSelected ? Colors.white : Colors.grey.shade300, // 색상 조정
             ),
           ),
         ),

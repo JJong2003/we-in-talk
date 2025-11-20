@@ -36,11 +36,39 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const Color primaryNavy = Color(0xFF1A237E); // 쪽빛
+    const Color backgroundCream = Color(0xFFFDFBF7); // 한지색
+    const Color textDark = Color(0xFF333333); // 먹색
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'We-in Talk', // 기존 title
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primaryColor: primaryNavy,
+        scaffoldBackgroundColor: backgroundCream, // 전체 배경 크림색
+
+        // 앱바 테마
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: IconThemeData(color: textDark),
+          titleTextStyle: TextStyle(color: textDark, fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+
+        // 버튼 테마 (ElevatedButton)
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primaryNavy,
+            foregroundColor: Colors.white,
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+
+        // ColorScheme 설정
+        colorScheme: ColorScheme.fromSwatch().copyWith(
+          primary: primaryNavy,
+          secondary: Colors.orange,
+        ),
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       home: LoginScreen(), // 로그인 화면으로 시작
