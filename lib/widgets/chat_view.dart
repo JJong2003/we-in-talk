@@ -171,7 +171,15 @@ class _ChatViewState extends State<ChatView> {
 
   Future<void> _startListening() async {
     await _flutterTts.stop();
-    await _azureSttService.startRecording(); // [외부 연동 로직 유지]
+
+    // [수정] 침묵 감지 콜백(onSilence)을 전달해야 자동 종료 기능이 작동합니다.
+    await _azureSttService.startRecording(
+      onSilence: () {
+        // 🤫 침묵(2초간 말 없음)이 감지되면 실행됨
+        // 부모 위젯(SaejongChatScreen)에게 녹음 상태를 끄라고 요청
+        widget.onToggleRecording();
+      },
+    );
   }
 
   Future<void> _stopListeningAndProcess() async {
