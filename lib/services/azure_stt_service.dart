@@ -85,7 +85,7 @@ class AzureSttService {
         // 침묵 타이머가 돌고 있지 않다면 시작
         if (_silenceTimer == null || !_silenceTimer!.isActive) {
           _silenceTimer = Timer(_silenceDuration, () {
-            print("🤫 1초간 침묵 감지됨! 녹음 자동 종료.");
+            print("🤫 2초간 침묵 감지됨! 녹음 자동 종료.");
             _stopMonitoring(); // 모니터링 중지
             if (onSilenceDetected != null) {
               onSilenceDetected!(); // 외부(ChatView)에 알림
