@@ -24,7 +24,7 @@ class AzureSttService {
   final double _silenceThreshold = -30.0;
 
   // 침묵 유지 시간 (이 시간 동안 말이 없으면 녹음 종료)
-  final Duration _silenceDuration = const Duration(seconds: 1);
+  final Duration _silenceDuration = const Duration(seconds: 2);
 
   // 침묵 감지 시 실행할 콜백 함수
   Function()? onSilenceDetected;
@@ -85,7 +85,7 @@ class AzureSttService {
         // 침묵 타이머가 돌고 있지 않다면 시작
         if (_silenceTimer == null || !_silenceTimer!.isActive) {
           _silenceTimer = Timer(_silenceDuration, () {
-            print("🤫 1초간 침묵 감지됨! 녹음 자동 종료.");
+            print("🤫 2초간 침묵 감지됨! 녹음 자동 종료.");
             _stopMonitoring(); // 모니터링 중지
             if (onSilenceDetected != null) {
               onSilenceDetected!(); // 외부(ChatView)에 알림
