@@ -24,7 +24,7 @@ class AzureSttService {
   final double _silenceThreshold = -30.0;
 
   // 침묵 유지 시간 (이 시간 동안 말이 없으면 녹음 종료)
-  final Duration _silenceDuration = const Duration(seconds: 1);
+  final Duration _silenceDuration = const Duration(seconds: 2);
 
   // 침묵 감지 시 실행할 콜백 함수
   Function()? onSilenceDetected;
