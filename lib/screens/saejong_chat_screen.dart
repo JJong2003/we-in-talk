@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/event_flow_widget.dart';
-import '../widgets/chat_view.dart';
+import '../widgets/chat_view.dart'; // [중요] 1단계에서 수정한 ChatView여야 합니다.
 
 class SaejongChatScreen extends StatefulWidget {
   const SaejongChatScreen({Key? key}) : super(key: key);
@@ -14,7 +14,8 @@ class _SaejongChatScreenState extends State<SaejongChatScreen> {
 
   bool _isQuizMode = false;
   bool _isKingCentered = false;
-  // [수정] 초기 마이크 상태를 꺼짐(false)으로 설정
+
+  // ★★★ [수정 핵심] true -> false로 변경! (처음엔 듣지 말고 말하기 위해) ★★★
   bool _isRecording = false;
 
   void _toggleQuizMode(bool isQuiz) {

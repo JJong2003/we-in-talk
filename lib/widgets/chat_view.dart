@@ -9,19 +9,19 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 
 import '../widgets/chat_bubble.dart';
-import '../widgets/quiz_bubble.dart'; // QuizScreen 위젯을 위해 필요
+import '../widgets/quiz_bubble.dart';
 import '../services/azure_stt_service.dart';
 
 import 'package:flutter/services.dart'; // HapticFeedback 용
 import 'package:avatar_glow/avatar_glow.dart'; // 물결 애니메이션 용
 
-// QuizScreen이 없으면 아래 더미 클래스를 사용합니다.
-// class QuizScreen extends StatelessWidget {
-//   final ValueChanged<bool> onToggleQuizMode;
-//   final ValueChanged<bool> onToggleKingPosition;
-//   const QuizScreen({required this.onToggleQuizMode, required this.onToggleKingPosition});
-//   @override Widget build(BuildContext context) => const Center(child: Text("퀴즈 화면"));
-// }
+
+ class QuizScreen extends StatelessWidget {
+   final ValueChanged<bool> onToggleQuizMode;
+   final ValueChanged<bool> onToggleKingPosition;
+  const QuizScreen({required this.onToggleQuizMode, required this.onToggleKingPosition});
+  @override Widget build(BuildContext context) => const Center(child: Text("퀴즈 화면"));
+ }
 
 
 class ChatMessage {
@@ -60,7 +60,6 @@ class _ChatViewState extends State<ChatView> {
   final FlutterTts _flutterTts = FlutterTts();
 
   final String _sejongKey = "persona_sejong";
-
   final String _systemPrompt =
       "너는 조선의 4대 왕, 세종대왕이다. "
       "너는 훈민정음을 창제하였으며, 백성을 매우 사랑한다. "
@@ -73,10 +72,12 @@ class _ChatViewState extends State<ChatView> {
     super.initState();
     _initializeServices();
     _loadChatHistory();
+    _initializeServices().then((_) {
+      _loadChatHistory();
+    });
   }
 
   Future<void> _initializeServices() async {
-    // [외부 연동 로직 유지] .env에서 키를 가져와 설정
     String? openAiKey = dotenv.env['OPENAI_API_KEY'];
     if (openAiKey != null && openAiKey.isNotEmpty) {
       OpenAI.apiKey = openAiKey;
@@ -85,7 +86,9 @@ class _ChatViewState extends State<ChatView> {
     try {
       await _flutterTts.setLanguage("ko-KR");
       await _flutterTts.setSpeechRate(0.4);
-      await _flutterTts.setPitch(0.9);
+      await _flutterTts.setPitch(0.6); // 굵은 목소리
+      await _flutterTts.setVolume(1.0); // 볼륨 최대
+
       await _flutterTts.setIosAudioCategory(
           IosTextToSpeechAudioCategory.playback,
           [
@@ -100,7 +103,6 @@ class _ChatViewState extends State<ChatView> {
   }
 
   void _loadChatHistory() {
-    // [외부 연동 로직 유지] Firebase DB에서 대화 기록 로드
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
@@ -123,16 +125,28 @@ class _ChatViewState extends State<ChatView> {
 
         setState(() => _chatHistory = loaded);
         WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+
+        // [수정] 대화가 딱 1개(인사말)만 있으면 다시 읽어줌 (1초 딜레이)
+        if (loaded.length == 1 && !loaded.last.isUser) {
+          Future.delayed(const Duration(seconds: 1), () {
+            _speak(loaded.last.text);
+          });
+        }
+
       } else {
         String greeting = "과인이 조선의 임금, 이도니라. 백성아, 무엇이 궁금하느냐?";
         _addMessage(greeting, isUser: false);
         _saveMessageToDB(greeting, false);
+
+        // [수정] 1초 기다렸다가 말하기
+        Future.delayed(const Duration(seconds: 1), () {
+          _speak(greeting);
+        });
       }
     });
   }
 
   void _saveMessageToDB(String text, bool isUser) {
-    // [외부 연동 로직 유지] Firebase DB에 메시지 저장
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
@@ -186,14 +200,16 @@ class _ChatViewState extends State<ChatView> {
     setState(() => _isLoading = true);
 
     try {
-      // [외부 연동 로직 유지] Azure STT 호출
       String? userText = await _azureSttService.stopRecordingAndGetText();
 
       if (userText != null && userText.isNotEmpty) {
+        // 1. 사용자 메시지 처리
         _addMessage(userText, isUser: true);
         _saveMessageToDB(userText, true);
 
         await _sendToOpenAI(); // [외부 연동 로직 유지]
+        _saveMessageToDB(userText, true);
+        await _sendToOpenAI();
       } else {
         print("음성 인식 결과 없음");
       }
@@ -203,7 +219,7 @@ class _ChatViewState extends State<ChatView> {
         const SnackBar(content: Text("통신 중 오류가 발생하였소.")),
       );
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
     }
   }
 
@@ -211,22 +227,16 @@ class _ChatViewState extends State<ChatView> {
     try {
       final systemMessage = OpenAIChatCompletionChoiceMessageModel(
         role: OpenAIChatMessageRole.system,
-        content: [
-          OpenAIChatCompletionChoiceMessageContentItemModel.text(_systemPrompt)
-        ],
+        content: [OpenAIChatCompletionChoiceMessageContentItemModel.text(_systemPrompt)],
       );
 
-      // [로직 유지] 대화 기록을 GPT에 전달
       final historyMessages = _chatHistory.map((msg) {
         return OpenAIChatCompletionChoiceMessageModel(
           role: msg.isUser ? OpenAIChatMessageRole.user : OpenAIChatMessageRole.assistant,
-          content: [
-            OpenAIChatCompletionChoiceMessageContentItemModel.text(msg.text)
-          ],
+          content: [OpenAIChatCompletionChoiceMessageContentItemModel.text(msg.text)],
         );
       }).toList();
 
-      // [외부 연동 로직 유지] OpenAI GPT 호출
       final response = await OpenAI.instance.chat.create(
         model: 'gpt-4o-mini',
         messages: [systemMessage, ...historyMessages],
@@ -238,17 +248,24 @@ class _ChatViewState extends State<ChatView> {
       if (botResponse != null) {
         _addMessage(botResponse, isUser: false);
         _saveMessageToDB(botResponse, false);
-        _speak(botResponse); // [외부 연동 로직 유지]
+        _speak(botResponse);
       }
     } catch (e) {
       print("GPT API 오류: $e");
-      _addMessage("과인이 잠시 깊은 생각에 잠겼노라. 다시 말해주겠느냐?", isUser: false);
+      _addMessage("과인이 잠시 깊은 생각에 잠겼노라.", isUser: false);
     }
   }
 
   Future<void> _speak(String text) async {
     if (widget.isRecording) return;
     await _flutterTts.speak(text); // [외부 연동 로직 유지]
+    // [디버깅 로그 추가] 왜 안 말하는지 확인
+    if (widget.isRecording) {
+      print("📢 [TTS Skipped] 녹음 중이라서 말을 안 합니다.");
+      return;
+    }
+    print("🔊 [TTS Speaking] 말하기 시작: $text");
+    await _flutterTts.speak(text);
   }
 
   void _addMessage(String text, {required bool isUser}) {
@@ -313,7 +330,6 @@ class _ChatViewState extends State<ChatView> {
             },
           ),
         ),
-        // [디자인 변경] 로딩바 색상 변경
         if (_isLoading)
           const Padding(
             padding: EdgeInsets.all(8.0),
@@ -322,7 +338,6 @@ class _ChatViewState extends State<ChatView> {
                 color: primaryNavy // 네이비색 적용
             ),
           ),
-        // [디자인 변경] 경청 텍스트 색상 및 스타일 변경
         if (widget.isRecording)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 20.0), // 여백 추가

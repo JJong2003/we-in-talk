@@ -7,9 +7,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:dart_openai/dart_openai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter/services.dart'; // 햅틱 피드백용
-import 'package:avatar_glow/avatar_glow.dart'; // 물결 애니메이션 용
-
+import 'package:flutter/services.dart';
 import '../widgets/chat_bubble.dart';
 import '../services/azure_stt_service.dart';
 
@@ -53,16 +51,26 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
   }
 
   Future<void> _initializeServices() async {
-    // [API 로직 유지]
     String apiKey = dotenv.env['OPENAI_API_KEY'] ?? "";
     if (apiKey.isNotEmpty) {
       OpenAI.apiKey = apiKey;
     }
 
     await _flutterTts.setLanguage("ko-KR");
-    final voiceSettings = widget.personaData['voiceSettings'] ?? {'pitch': 1.0, 'rate': 0.5};
-    await _flutterTts.setPitch((voiceSettings['pitch'] as num).toDouble());
-    await _flutterTts.setSpeechRate((voiceSettings['rate'] as num).toDouble());
+
+    // 3. 성별에 따른 Pitch(톤) 단순 설정
+    String gender = widget.personaData['gender'] ?? 'male';
+
+    double targetPitch = 1.0;
+
+    if (gender == 'female') {
+      targetPitch = 1.2; // 여성이면 높게
+    } else {
+      targetPitch = 0.6; // 남성이면 낮게 (굵게)
+    }
+
+    await _flutterTts.setPitch(targetPitch);
+    await _flutterTts.setSpeechRate(0.5); // 속도는 조금 느리게 고정
   }
 
   void _loadChatHistory() {
@@ -91,6 +99,7 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
         WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
 
       } else {
+        // 첫 인사
         String charName = widget.personaData['title'] ?? widget.personaData['name'] ?? '가상 인물';
         String greeting = "$charName이오. 무엇이 궁금하시오?";
 
@@ -106,8 +115,6 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
 
     _addMessageToUI(text, isUser: true);
     _saveMessageToDB(text, true);
-
-    if (!mounted) return;
 
     setState(() => _isLoading = true);
 
@@ -131,16 +138,14 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
         historyCount++;
       }
 
-      // [외부 연동 로직 유지]
       final response = await OpenAI.instance.chat.create(
         model: 'gpt-4o-mini',
         messages: requestMessages,
       );
 
-      if (!mounted) return;
-
       final botReply = response.choices.first.message.content?.first.text ?? "말씀을 이해하지 못했소.";
 
+      // 2. 봇 응답 처리
       _addMessageToUI(botReply, isUser: false);
       _saveMessageToDB(botReply, false);
       _speak(botReply);
@@ -149,7 +154,7 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
       print("GPT 오류: $e");
       _addMessageToUI("통신 상태가 좋지 않소.", isUser: false);
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
     }
   }
 
@@ -193,11 +198,7 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
       setState(() => _isRecording = false);
       setState(() => _isLoading = true);
 
-      // [외부 연동 로직 유지]
       String? result = await _azureSttService.stopRecordingAndGetText();
-
-      if (!mounted) return;
-
       if (result != null && result.isNotEmpty) {
         _sendMessage(result);
       } else {
@@ -314,7 +315,6 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
                         ),
                       ),
 
-                      // 로딩 인디케이터
                       if (_isLoading)
                         const Padding(
                           padding: EdgeInsets.all(8.0),
@@ -324,7 +324,7 @@ class _UniversalChatScreenState extends State<UniversalChatScreen> {
                           ),
                         ),
 
-                      // ★ 하단 마이크 컨트롤 (디자인 변경)
+                      // ★ [핵심 수정] 하단 입력부를 '마이크 버튼 하나'로 변경
                       Container(
                         padding: const EdgeInsets.symmetric(vertical: 20),
                         alignment: Alignment.center,

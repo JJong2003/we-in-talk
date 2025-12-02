@@ -41,8 +41,8 @@ class AzureSttService {
       return;
     }
 
-    final Directory tempDir = await getTemporaryDirectory();
-    _recordedFilePath = '${tempDir.path}/temp_audio.wav';
+      final Directory tempDir = await getTemporaryDirectory();
+      _recordedFilePath = '${tempDir.path}/temp_audio.wav';
 
     const config = RecordConfig(
       encoder: AudioEncoder.wav,
@@ -122,20 +122,19 @@ class AzureSttService {
       print("❌ 녹음 파일 생성 실패");
       return null;
     }
-
-    print("⏹️ 녹음 종료. Azure로 전송 시작...");
-    return await _sendToAzure(path);
   }
 
   Future<String?> _sendToAzure(String filePath) async {
     if (subscriptionKey.isEmpty) {
-      print("❌ .env에 AZURE_SUBSCRIPTION_KEY가 설정되지 않았습니다.");
-      return "API 키 오류";
+      print("[AzureSTT] ❌ .env 키가 없습니다. AZURE_SUBSCRIPTION_KEY를 확인하세요.");
+      return null;
     }
     final url = Uri.parse(
         "https://$region.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=ko-KR");
 
     try {
+      print("[AzureSTT] 🚀 Azure로 데이터 전송 중...");
+
       final file = File(filePath);
       final bytes = await file.readAsBytes();
 
