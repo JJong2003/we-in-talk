@@ -47,7 +47,7 @@ class _QuizScreenState extends State<QuizScreen> {
     QuizProblem(
         question: "1. 훈민정음이 창제되기 전에는 우리말을 표기할 문자가 있었다.",
         answer: true,
-        explanation: "훈민정음은 1443년에 '창제'되었고, 3년 뒤인 1446년에 '반포'되었습니다.",
+        explanation: "한자의 음(소리)이나 훈(뜻)을 빌려 우리말을 표기하는 '이두(吏讀)' 등이 사용되었습니다.",
         summaryQuestion: "문제 1. 훈민정음 창제 전에도 우리말 표기가 있었나?",
         summaryAnswer: "한자의 음(소리)이나 훈(뜻)을 빌려 우리말을 표기하는 '이두(吏讀)' 등이 사용되었습니다."
     ),
@@ -63,7 +63,7 @@ class _QuizScreenState extends State<QuizScreen> {
         answer: false,
         explanation: "한글날(10월 9일)은 이 '반포'된 날을 기준으로 기념하는 날입니다.",
         summaryQuestion: "문제 3. 한글날은 훈민정음의 어떤 것을 기념하는 날인가?",
-        summaryAnswer: "한글날은 훈민정음의 반포(공개)를 기념하는 날 입니다."
+        summaryAnswer: "훈민정음은 1443년에 '창제'되었고, 3년 뒤인 1446년에 '반포'되었습니다.\n한글날은 훈민정음의 반포(공개)를 기념하는 날 입니다."
     ),
   ];
 
